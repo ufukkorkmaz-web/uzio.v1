@@ -629,7 +629,7 @@
     var VS = 'attribute vec2 a;varying vec2 vUv;void main(){vUv=a*.5+.5;gl_Position=vec4(a,0.,1.);}';
     var FS = [
 'precision highp float;',
-'uniform vec2 uRes;uniform float uTime;uniform vec2 uGaze;uniform float uBlink;uniform float uHappy;uniform float uSpin;uniform float uDark;',
+'uniform vec2 uRes;uniform float uTime;uniform vec2 uGaze;uniform float uBlink;uniform float uHappy;uniform float uSpin;uniform float uDark;uniform float uDizzy;',
 'varying vec2 vUv;',
 'const vec3 C0=vec3(.118,.655,1.);const vec3 C1=vec3(1.,.176,.459);const vec3 C2=vec3(.722,1.,.122);',
 'const vec3 C3=vec3(.706,.302,1.);const vec3 C4=vec3(1.,.631,.102);',
@@ -694,8 +694,13 @@
 '    float h1=smoothstep(1.,.6,length((e-vec2(-.024,.052*bl))/vec2(.034,.034*bl+.001)));',
 '    float h2=smoothstep(1.,.6,length((e-vec2(.03,-.05*bl))/vec2(.017,.017*bl+.001)));',
 '    c=mix(c,vec3(1.),max(h1,h2*.85)*ea*smoothstep(.2,.6,bl));',
+'    vec2 d2=e/vec2(.128,.15);float dr=length(d2);',
+'    float disc=smoothstep(1.,.9,dr)*fm*uDizzy;',
+'    float coil=smoothstep(-.1,.35,sin(dr*15.-sx*atan(d2.y,d2.x+.0001)-uTime*14.));',
+'    c=mix(c,mix(vec3(1.),ink,coil),disc);',
 '  }',
 '  vec2 m=vec2(u,v+.185);',
+'  m.y+=uDizzy*.017*sin(m.x*75.);',
 '  float s1=m.x/.125;',
 '  float line=smoothstep(.019,.011,abs(m.y-(.03*s1*s1-.03)))*smoothstep(1.,.82,abs(s1));',
 '  vec2 me=m-vec2(0.,-.035);',
@@ -733,7 +738,7 @@
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     var U = {};
-    ['uRes', 'uTime', 'uGaze', 'uBlink', 'uHappy', 'uSpin', 'uDark'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
+    ['uRes', 'uTime', 'uGaze', 'uBlink', 'uHappy', 'uSpin', 'uDark', 'uDizzy'].forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
     gl.clearColor(0, 0, 0, 0);
 
     function fit() {
@@ -840,6 +845,17 @@
         }
         o.hat = h;
       } },
+      /* the "spin" magic word: 8 fast turns around its own axis... */
+      twirl:  { d: 2600, next: 'dizzy', f: function (ph, o, m) {
+        var turn = (1 - Math.cos(PI * ph)) / 2;
+        o.spin = m.dir * PI * 16 * turn; o.sy = 1 + .08 * sin(PI * ph); o.sx = 1 - .05 * sin(PI * ph); o.jy = -10 * sin(PI * ph);
+      } },
+      /* ...then spiral eyes, a wavy mouth and a woozy sway that slowly settles */
+      dizzy:  { d: 3200, f: function (ph, o) {
+        var fade = Math.min(1, (1 - ph) * 4), sway = 1 - ph;
+        o.dizzy = fade; o.rot = 18 * sin(ph * PI * 7) * sway; o.jx = 12 * sin(ph * PI * 7 + 1) * sway; o.jy = 4 * Math.abs(sin(ph * PI * 7)) * sway;
+        o.gx = .45 * Math.cos(ph * PI * 9) * fade; o.gy = .35 * sin(ph * PI * 9) * fade;
+      } },
       sleepy: { d: 3200, f: function (ph, o) { var s = sin(PI * ph); o.blink = 1 - .88 * s * s; o.gyo = -.45 * s; o.rot = 4 * sin(ph * PI * 2) * s; } }
     };
     var BORED = ['wiggle', 'yawn', 'look', 'bounce', 'sleepy', 'laugh', 'laugh', 'tipover'];
@@ -853,6 +869,12 @@
         hatEl.innerHTML = HATS[lastHat];
       }
     }
+
+    /* lets the chat ask for the spin. onDizzy runs when the turning stops. */
+    window.UzioOrb = {
+      twirl: function (onDizzy) { if (reduce) return false; start('twirl', performance.now()); mv.onNext = onDizzy; return true; },
+      busy: function () { return !!mv && (mv.n === 'twirl' || mv.n === 'dizzy'); }
+    };
 
     function frame(now) {
       requestAnimationFrame(frame);
@@ -870,10 +892,14 @@
           nextBored = now + 3500 + Math.random() * 3500;
         }
       }
-      var o = { spin: 0, jx: 0, jy: 0, sx: 1, sy: 1, rot: 0, happy: 0, blink: 1, gx: null, gy: null, gyo: 0, hat: null };
+      var o = { spin: 0, jx: 0, jy: 0, sx: 1, sy: 1, rot: 0, happy: 0, blink: 1, gx: null, gy: null, gyo: 0, hat: null, dizzy: 0 };
       if (mv) {
         var ph = (now - mv.t0) / MOVES[mv.n].d;
-        if (ph >= 1) mv = null; else MOVES[mv.n].f(ph, o, mv);
+        if (ph >= 1) {
+          var done = mv; mv = null;
+          if (MOVES[done.n].next) { start(MOVES[done.n].next, now); if (done.onNext) done.onNext(); }
+          else if (done.n === 'dizzy') { nextSpin = now + 10000; nextBored = now + 6000; }
+        } else MOVES[mv.n].f(ph, o, mv);
       }
 
       var tx = 0, ty = 0;
@@ -921,6 +947,7 @@
       gl.uniform1f(U.uBlink, blink);
       gl.uniform1f(U.uHappy, happy);
       gl.uniform1f(U.uSpin, o.spin);
+      gl.uniform1f(U.uDizzy, o.dizzy);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     requestAnimationFrame(frame);
