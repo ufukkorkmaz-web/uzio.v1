@@ -277,3 +277,45 @@ body .room .uai--room .uai-msg { max-width: min(75%, 640px); font-size: 16px; }
 @media (max-width: 899px) {
   body .room { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 0 10px 4px; }
 }
+
+/* ======================================================================
+   Uzio's extra moves. They use translate / rotate / scale, so they stack on top of the float.
+   ====================================================================== */
+body .room .room-orb .orb-body {
+  transform-origin: 50% 80%;
+  transition: translate .6s cubic-bezier(.32, 1.4, .45, 1), rotate .6s cubic-bezier(.32, 1.4, .45, 1);
+}
+
+/* peek: leans toward the chat while you type */
+body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: -9deg; translate: -6% 2%; }
+
+/* hop: squash and bounce when a message is sent (.thinking is added at that moment) */
+body .room.thinking .room-orb .orb-body { animation: orbfloat 4.2s ease-in-out infinite, uzioHop .7s cubic-bezier(.3, .7, .4, 1); }
+@keyframes uzioHop {
+  0%, 100% { scale: 1 1; translate: 0 0; }
+  18% { scale: 1.1 .88; translate: 0 3%; }
+  45% { scale: .93 1.08; translate: 0 -9%; }
+  70% { scale: 1.06 .94; translate: 0 1%; }
+  85% { scale: .98 1.02; translate: 0 -1%; }
+}
+
+/* thinking orbit: three little lights circle Uzio until the reply is done */
+body .room .room-orb::after {
+  content: ''; position: absolute; inset: 0; z-index: 3; border-radius: 50%; pointer-events: none;
+  background:
+    radial-gradient(circle 1.5cqmin at 50% 6%, #fff 0 35%, #ffd36b 60%, transparent 100%),
+    radial-gradient(circle 1.5cqmin at 88.1% 72%, #fff 0 35%, #ff7ab5 60%, transparent 100%),
+    radial-gradient(circle 1.5cqmin at 11.9% 72%, #fff 0 35%, #6bc8ff 60%, transparent 100%);
+  opacity: 0; scale: .8; transition: opacity .25s ease, scale .4s ease;
+}
+body .room.thinking .room-orb::after { opacity: 1; scale: 1; animation: uzioOrbit 1.6s linear infinite; }
+@keyframes uzioOrbit { to { rotate: 360deg; } }
+
+/* when Uzio sits above the chat, it peeks downward instead */
+@media (max-width: 899px) {
+  body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: -4deg; translate: 0 5%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body .room .room-orb .orb-body, body .room.thinking .room-orb .orb-body, body .room.thinking .room-orb::after { animation: none; transition: none; }
+  body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: none; translate: none; }
+}
