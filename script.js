@@ -123,7 +123,7 @@
     applyLanguage(document);
     if (onb && onb.classList.contains('show')) { onbRender(); applyLanguage(onb); }
     var vv = views[curView] || views.home;
-    $('eyebrow').textContent = translateString(vv.e); $('title').textContent = translateString(vv.t); $('blurb').textContent = translateString(vv.p);
+    $('title').textContent = translateString(vv.t); $('blurb').textContent = translateString(vv.p);
     document.title = vv.e === 'Home' ? 'Uzio' : translateString(vv.e) + ' · Uzio';
   });
 
@@ -405,7 +405,7 @@
       if (token !== swapToken) return;
       panel.style.minHeight = '';
       renderPanel(id);
-      $('eyebrow').textContent = translateString(v.e); $('title').textContent = translateString(v.t); $('blurb').textContent = translateString(v.p);
+      $('title').textContent = translateString(v.t); $('blurb').textContent = translateString(v.p);
       viewEl.classList.remove('swap'); void viewEl.offsetWidth; viewEl.classList.add('swap');
       panel.classList.remove('is-out'); viewEl.classList.remove('is-out');
     };
