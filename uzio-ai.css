@@ -122,3 +122,82 @@
   .uai, .uai-msg, .uai-chip { transition: opacity .15s linear; animation: none; transform: none; }
   .uai-typing i, .uai-mic.on { animation: none; }
 }
+
+/* ======================================================================
+   Uzio's Room (Uzio AI tab): orb in the middle, chat below it, speak button
+   ====================================================================== */
+.uzio-orb.away { display: none !important; } /* the corner chatbot is removed while the room is open */
+
+.room { --room-accent: var(--accent, #ffa11a); max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 16px; animation: uaiIn .5s cubic-bezier(.32, 1.25, .45, 1) both; }
+
+.room-stage {
+  position: relative; width: 100%; height: clamp(210px, 31vh, 290px); border-radius: 32px; overflow: hidden; isolation: isolate;
+  background:
+    radial-gradient(ellipse 60% 70% at 50% 62%, color-mix(in srgb, var(--room-accent) 26%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--card, #fff) 92%, var(--room-accent)) 0 62%, color-mix(in srgb, var(--card, #fff) 80%, var(--fg, #000) 8%) 62% 100%);
+  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .7)), var(--card-shadow, 0 10px 30px rgba(30, 30, 60, .1));
+}
+/* the floor line + a soft perspective grid */
+.room-stage::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 62%; bottom: 0; z-index: 0; opacity: .5;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--fg, #000) 14%, transparent), transparent 60%),
+    repeating-linear-gradient(90deg, transparent 0 46px, color-mix(in srgb, var(--fg, #000) 7%, transparent) 46px 47px);
+}
+.room-glow {
+  position: absolute; left: 50%; top: 46%; width: 300px; height: 300px; margin: -150px 0 0 -150px; z-index: 0; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--room-accent) 40%, transparent), transparent 68%);
+  animation: roomBreath 4.2s ease-in-out infinite;
+}
+.room-orb { position: absolute; left: 50%; top: 46%; width: 200px; height: 200px; margin: -100px 0 0 -100px; z-index: 2; cursor: pointer; }
+.room-orb .orb-body { position: absolute; inset: 0; width: 100%; height: 100%; animation: orbfloat 4.2s ease-in-out infinite; filter: drop-shadow(0 14px 18px var(--orb-shadow, rgba(60, 70, 150, .3))); }
+.room-orb canvas { display: block; width: 100%; height: 100%; }
+.room-orb.no-gl canvas { background: conic-gradient(from 0deg, #1ea7ff, #ff2d75, #b8ff1f, #b44dff, #ffa11a, #1ea7ff); clip-path: circle(37%); }
+.room-shadow {
+  position: absolute; left: 50%; top: 79%; width: 150px; height: 20px; margin-left: -75px; z-index: 1; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, .3), transparent 70%); animation: roomShadow 4.2s ease-in-out infinite;
+}
+/* Uzio reacts: a ring while listening, a gentle pulse while thinking */
+.room.listening .room-glow { animation: roomListen 1.3s ease-out infinite; background: radial-gradient(circle, rgba(255, 59, 48, .32), transparent 68%); }
+.room.thinking .room-glow { animation: roomBreath 1.2s ease-in-out infinite; }
+
+.uai.uai--room {
+  position: relative; right: auto; bottom: auto; left: auto; width: 100%; height: clamp(250px, 36vh, 360px); border-radius: 28px;
+  opacity: 1; visibility: visible; transform: none; transition: none; z-index: 1;
+}
+.uai--room .uai-head { display: none; }
+.uai--room .uai-mic { display: none; } /* the big speak button below replaces it */
+.uai--room .uai-log { padding-top: 14px; }
+
+.room-speak {
+  display: inline-flex; align-items: center; gap: 12px; height: 56px; padding: 0 26px 0 8px; border: 0; border-radius: 99px; cursor: pointer;
+  font: inherit; font-size: 16px; font-weight: 700; letter-spacing: -.01em; color: var(--fg, #000);
+  background: color-mix(in srgb, var(--card, #fff) 80%, transparent); -webkit-backdrop-filter: blur(24px) saturate(1.8); backdrop-filter: blur(24px) saturate(1.8);
+  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .7)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .14));
+  transition: transform .3s cubic-bezier(.32, 1.25, .45, 1), background .2s, color .2s;
+}
+.room-speak:hover:not(:disabled) { transform: translateY(-2px) scale(1.03); }
+.room-speak:active:not(:disabled) { transform: scale(.97); }
+.room-speak:disabled { opacity: .5; cursor: default; }
+.room-speak.no-sr { opacity: .55; }
+.room-speak-ic { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--room-accent); box-shadow: 0 6px 16px color-mix(in srgb, var(--room-accent) 40%, transparent); }
+.room-speak-ic svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+.room-speak.on { color: #fff; background: #ff3b30; animation: uaiPulse 1.4s ease-out infinite; }
+.room-speak.on .room-speak-ic { background: rgba(255, 255, 255, .22); box-shadow: none; }
+.room-speak:focus-visible { outline: 3px solid color-mix(in srgb, var(--room-accent) 70%, transparent); outline-offset: 3px; }
+
+@keyframes roomBreath { 0%, 100% { opacity: .75; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.05); } }
+@keyframes roomListen { 0% { opacity: 1; transform: scale(.9); } 100% { opacity: .5; transform: scale(1.25); } }
+@keyframes roomShadow { 0%, 100% { transform: scaleX(1); opacity: .9; } 50% { transform: scaleX(.86); opacity: .6; } }
+
+@media (max-width: 640px) {
+  .room-stage { height: 230px; border-radius: 26px; }
+  .room-orb { width: 160px; height: 160px; margin: -80px 0 0 -80px; }
+  .room-shadow { width: 120px; margin-left: -60px; }
+  .uai.uai--room { height: min(360px, 46dvh); border-radius: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .room, .room-glow, .room-shadow, .room-orb .orb-body, .room-speak.on { animation: none; }
+}
+.room-chat { width: 100%; min-width: 0; }
+@media (max-width: 640px) { .room { padding-bottom: 96px; } } /* keeps the speak button clear of the bottom tab bar */
