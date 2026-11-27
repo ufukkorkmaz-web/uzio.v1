@@ -139,7 +139,7 @@
   animation: roomBreath 4.2s ease-in-out infinite;
 }
 /* the canvas has transparent margins around the glass sphere, so the box is a bit bigger than the stage */
-.room-orb { position: absolute; left: 50%; top: 50%; width: min(60dvh, 100%); width: min(122cqh, 100cqw, 660px); aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 2; cursor: pointer; }
+.room-orb { position: absolute; left: 50%; top: 50%; width: min(60dvh, 100%); width: min(122cqh, 100cqw, 760px); aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 2; cursor: pointer; }
 .room-orb .orb-body { position: absolute; inset: 0; width: 100%; height: 100%; animation: orbfloat 4.2s ease-in-out infinite; filter: drop-shadow(0 18px 22px var(--orb-shadow, rgba(60, 70, 150, .3))); }
 .room-orb canvas { display: block; width: 100%; height: 100%; }
 .room-orb.no-gl canvas { background: conic-gradient(from 0deg, #1ea7ff, #ff2d75, #b8ff1f, #b44dff, #ffa11a, #1ea7ff); clip-path: circle(37%); }
@@ -147,34 +147,74 @@
 .room.listening .room-glow { animation: roomListen 1.3s ease-out infinite; background: radial-gradient(circle, rgba(255, 59, 48, .32), transparent 68%); }
 .room.thinking .room-glow { animation: roomBreath 1.2s ease-in-out infinite; }
 
-.room-chat { flex: none; width: min(560px, 100%); min-width: 0; }
+.room-chat { flex: none; width: min(620px, 100%); min-width: 0; position: relative; z-index: 5; }
 
-/* the chat: one slim glass card, same material as the top bar */
+/* the chat dock: [history button] [ input · mic · send ] with the quick replies above. The history pops up over the orb. */
+.uai-hist { display: none; }
+.uai-field { display: contents; }
 .uai.uai--room {
-  position: relative; right: auto; bottom: auto; left: auto; width: 100%; height: clamp(168px, 26dvh, 236px); border-radius: 26px;
+  position: relative; right: auto; bottom: auto; left: auto; width: 100%; height: auto; overflow: visible; border-radius: 0;
+  background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
   opacity: 1; visibility: visible; transform: none; transition: none; z-index: 1;
 }
 .uai--room .uai-head { display: none; }
-.uai--room .uai-log { padding: 12px 12px 4px; gap: 6px; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--fg, #000) 22%, transparent) transparent; }
+
+/* history pop-up: same glass as the top bar, opens above the input */
+.uai--room .uai-log {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); flex: none; max-height: min(42dvh, 340px); padding: 12px; gap: 6px; border-radius: 26px;
+  background: color-mix(in srgb, var(--card, #fff) 66%, transparent); -webkit-backdrop-filter: blur(30px) saturate(1.9); backdrop-filter: blur(30px) saturate(1.9);
+  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .75)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12));
+  scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--fg, #000) 22%, transparent) transparent;
+  opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(10px) scale(.97); transform-origin: 50% 100%;
+  transition: opacity .2s ease, transform .4s cubic-bezier(.32, 1.25, .45, 1), visibility 0s linear .4s;
+}
+.uai--room.hist-open .uai-log { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition-delay: 0s; }
 .uai--room .uai-msg { max-width: 92%; padding: 7px 12px; border-radius: 16px; font-size: 14px; line-height: 1.38; }
 .uai--room .uai-bot { border-bottom-left-radius: 5px; }
 .uai--room .uai-me { border-bottom-right-radius: 5px; }
 .uai--room .uai-extra { margin-top: 8px; }
 .uai--room .uai-go { padding: 6px 12px; font-size: 13px; }
-.uai--room .uai-chips { padding: 4px 12px 6px; gap: 6px; }
+
+.uai--room .uai-chips { justify-content: safe center; padding: 0 2px 10px; gap: 6px; }
 .uai--room .uai-chip { padding: 6px 12px; font-size: 13px; }
-.uai--room .uai-form { padding: 2px 8px 8px; gap: 6px; }
-.uai--room .uai-input { height: 40px; padding: 0 14px; font-size: 15px; }
-.uai--room .uai-mic, .uai--room .uai-send { width: 40px; height: 40px; }
+
+.uai--room .uai-form { padding: 0; gap: 10px; align-items: center; }
+/* history button + input bar + mic + send: all the same liquid glass as the search button */
+.uai--room .uai-hist, .uai--room .uai-field { background: var(--glass, rgba(255, 255, 255, .58)); -webkit-backdrop-filter: blur(30px) saturate(1.9); backdrop-filter: blur(30px) saturate(1.9);
+  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .75)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)), inset 0 -1px 0 rgba(255, 255, 255, .08), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12)); }
+.uai--room .uai-hist {
+  flex: none; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; display: grid; place-items: center; color: var(--fg, #000);
+  transition: transform .4s cubic-bezier(.32, 1.25, .45, 1), color .2s;
+}
+.uai--room .uai-hist:hover { transform: scale(1.07); }
+.uai--room .uai-hist:active { transform: scale(.92); }
+.uai--room .uai-hist[aria-expanded="true"] { color: var(--uai-accent); }
+.uai-hist svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.uai--room .uai-field {
+  flex: 1; min-width: 0; height: 48px; display: flex; align-items: center; gap: 4px; padding: 0 5px 0 6px; border-radius: 999px;
+  transition: transform .35s cubic-bezier(.32, 1.25, .45, 1), box-shadow .3s ease;
+}
+.uai--room .uai-field:focus-within {
+  transform: scale(1.015);
+  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .75)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12)), 0 8px 28px color-mix(in srgb, var(--uai-accent) 22%, transparent);
+}
+.uai--room .uai-input { flex: 1; height: 100%; padding: 0 12px; background: transparent; border-radius: 0; font-size: 15px; font-weight: 600; box-shadow: none; }
+.uai--room .uai-input:focus { box-shadow: none; }
+.uai--room.uai-listening .uai-field { box-shadow: inset 0 0 0 1.5px rgba(255, 59, 48, .5), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12)); }
+.uai--room .uai-mic, .uai--room .uai-send {
+  width: 38px; height: 38px; background: color-mix(in srgb, var(--fg, #000) 7%, transparent); color: var(--fg, #000);
+  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .6)), inset 0 1px 0 var(--spec, rgba(255, 255, 255, .7));
+}
+.uai--room .uai-send { color: var(--uai-accent); background: color-mix(in srgb, var(--uai-accent) 16%, transparent); }
+.uai--room .uai-send:disabled { color: var(--fg2, rgba(60, 60, 67, .5)); background: color-mix(in srgb, var(--fg, #000) 7%, transparent); opacity: .6; }
+.uai--room .uai-mic.on, .uai--room .uai-mic.on:hover:not(:disabled) { color: #fff; background: #ff3b30; box-shadow: none; }
 .uai--room .uai-mic svg { width: 19px; height: 19px; }
 .uai--room .uai-send svg { width: 18px; height: 18px; }
 
 @keyframes roomBreath { 0%, 100% { opacity: .75; transform: translate(-50%, -50%) scale(.96); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } }
 @keyframes roomListen { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.9); } 100% { opacity: .5; transform: translate(-50%, -50%) scale(1.25); } }
 
-@media (max-width: 640px) {
-  .uai.uai--room { height: clamp(160px, 30dvh, 230px); border-radius: 24px; }
-}
 @media (prefers-reduced-motion: reduce) {
   .room, .room-glow, .room-orb .orb-body { animation: none; }
 }
+.uai--room .uai-input:focus-visible { outline: none; }
