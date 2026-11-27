@@ -658,7 +658,14 @@
   var doc = win.document, docEl = doc.documentElement;
   var reduce = win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var isHub = !!doc.getElementById('panel');
-  var panel, logEl, form, input, sendBtn, chipsEl, titleEl, subEl, closeBtn, resetBtn;
+  var panel, logEl, form, input, sendBtn, chipsEl, titleEl, subEl, closeBtn, resetBtn, histBtn;
+  var HIST = { en: 'Chat history', tr: 'Sohbet geçmişi', fr: 'Historique du chat', de: 'Chatverlauf' };
+  /* in the room the chat history is a pop-up above the input bar; this button (next to the bar) toggles it */
+  function histOpen(on) {
+    if (!panel) return;
+    panel.classList.toggle('hist-open', !!on);
+    if (histBtn) histBtn.setAttribute('aria-expanded', String(!!on));
+  }
   var state = { last: null, busy: false, open: false, started: false, room: false };
   var SR = win.SpeechRecognition || win.webkitSpeechRecognition;
   var SR_LANG = { en: 'en-US', tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
@@ -704,15 +711,19 @@
       '<div class="uai-log" id="uaiLog" role="log" aria-live="polite"></div>' +
       '<div class="uai-chips" id="uaiChips"></div>' +
       '<form class="uai-form" autocomplete="off">' +
+        '<button class="uai-hist" type="button" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4.5 3.5V17.5H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"/><path d="M8 10h8M8 13.5h5"/></svg></button>' +
+        '<div class="uai-field">' +
         '<input class="uai-input" type="text" maxlength="240" enterkeyhint="send" spellcheck="false">' +
         (SR ? '<button class="uai-mic" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></button>' : '') +
         '<button class="uai-send" type="submit" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5"/></svg></button>' +
+        '</div>' +
       '</form>';
     doc.body.appendChild(panel);
     logEl = panel.querySelector('.uai-log'); chipsEl = panel.querySelector('.uai-chips');
     form = panel.querySelector('form'); input = panel.querySelector('.uai-input'); sendBtn = panel.querySelector('.uai-send');
     titleEl = panel.querySelector('#uaiTitle'); subEl = panel.querySelector('#uaiSub');
-    micBtn = panel.querySelector('.uai-mic');
+    micBtn = panel.querySelector('.uai-mic'); histBtn = panel.querySelector('.uai-hist');
+    histBtn.addEventListener('click', function () { histOpen(!panel.classList.contains('hist-open')); });
     if (micBtn) micBtn.addEventListener('click', function () { if (rec) stopMic(); else startMic(); });
     closeBtn = panel.querySelector('[data-uai="close"]'); resetBtn = panel.querySelector('[data-uai="reset"]');
 
@@ -726,7 +737,7 @@
       var g = e.target.closest('[data-go]');
       if (g) go(g.getAttribute('data-go'));
     });
-    panel.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); } });
+    panel.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); if (panel.classList.contains('uai--room')) histOpen(false); else setOpen(false); } });
     chipsEl.addEventListener('wheel', function (e) { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { chipsEl.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
     applyLang();
   }
@@ -740,6 +751,7 @@
     closeBtn.setAttribute('aria-label', ui.close); closeBtn.title = ui.close;
     resetBtn.setAttribute('aria-label', ui.reset); resetBtn.title = ui.reset;
     panel.setAttribute('aria-label', ui.title);
+    if (histBtn) { var hl = HIST[curLang()] || HIST.en; histBtn.setAttribute('aria-label', hl); histBtn.title = hl; }
     if (micBtn) { var lbl = rec ? ui.micStop : ui.mic; micBtn.setAttribute('aria-label', lbl); micBtn.title = lbl; if (rec) input.placeholder = ui.listening; }
     Array.prototype.forEach.call(doc.querySelectorAll('.uzio-orb'), function (o) { o.setAttribute('aria-label', ui.open); });
     var sp = speakEl();
@@ -748,7 +760,7 @@
 
   function scrollDown() { logEl.scrollTop = logEl.scrollHeight; }
   function addUser(text) {
-    var d = doc.createElement('div'); d.className = 'uai-msg uai-me'; d.textContent = text; logEl.appendChild(d); scrollDown();
+    var d = doc.createElement('div'); d.className = 'uai-msg uai-me'; d.textContent = text; logEl.appendChild(d); histOpen(true); scrollDown();
   }
   function addBot() {
     var d = doc.createElement('div'); d.className = 'uai-msg uai-bot'; logEl.appendChild(d); scrollDown(); return d;
@@ -820,7 +832,7 @@
   }
   var statusT = 0;
   function roomStatus(text, keep) { var el = doc.getElementById('roomStatus'); if (!el) return; el.textContent = text || ''; clearTimeout(statusT); if (text && !keep) statusT = setTimeout(function () { el.textContent = ''; }, 9000); }
-  function note(text) { var d = addBot(); d.innerHTML = fmt(text); scrollDown(); roomStatus(text.replace(/\*\*/g, '')); }
+  function note(text) { var d = addBot(); d.innerHTML = fmt(text); histOpen(true); scrollDown(); roomStatus(text.replace(/\*\*/g, '')); }
   function micUI(on) {
     var ui = UI[curLang()];
     if (!micBtn) { roomMood('listening', on); var sp0 = speakEl(); if (sp0) { sp0.classList.toggle('on', on); } return; }
@@ -898,7 +910,7 @@
   }
 
   function reset() {
-    logEl.innerHTML = ''; state.last = null; state.busy = false; chipsEl.innerHTML = ''; micDis(false); cur(false); roomMood('thinking', false);
+    histOpen(false); logEl.innerHTML = ''; state.last = null; state.busy = false; chipsEl.innerHTML = ''; micDis(false); cur(false); roomMood('thinking', false);
     start(true);
   }
   function start(force) {
