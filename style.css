@@ -608,3 +608,10 @@ h1 { margin: 0; font-size: clamp(36px, 6.4vw, 60px); line-height: 1.03; font-wei
 .brand-logo{height:34px;width:auto;display:block}
 .brand-icon{display:none;width:36px;height:36px}
 @media(max-width:480px){.brand-logo{display:none}.brand-icon{display:block}}
+
+/* logo: dark wordmark on light theme, white wordmark on dark theme */
+.logo-dark{display:none}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo-light{display:none}:root:not([data-theme="light"]) .logo-dark{display:block}}
+:root[data-theme="dark"] .logo-light{display:none}
+:root[data-theme="dark"] .logo-dark{display:block}
+@media(max-width:480px){.brand-logo.logo-light,.brand-logo.logo-dark,:root:not([data-theme="light"]) .brand-logo.logo-dark,:root[data-theme="dark"] .brand-logo.logo-dark{display:none}}
