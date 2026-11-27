@@ -373,12 +373,10 @@
   }
 
   function rUzioAI() {
-    /* Uzio's Room: the real orb (moved in by uzio-ai.js) floats in the middle, the chat docks below it, then the speak button */
+    /* Uzio's Room: a big floating orb (moved in by uzio-ai.js) with one slim chat bar under it. No frame, no floor, no title. */
     return '<div class="room" id="room">' +
-      '<div class="room-stage"><div class="room-glow"></div><div class="room-orb" id="roomOrb"></div><div class="room-shadow"></div></div>' +
+      '<div class="room-stage"><div class="room-glow"></div><div class="room-orb" id="roomOrb"></div></div>' +
       '<div class="room-chat" id="roomChat"></div>' +
-      '<button class="room-speak" type="button" data-room="speak" aria-pressed="false"><span class="room-speak-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></span><span class="room-speak-t">Speak</span></button>' +
-      '<div class="room-status" id="roomStatus" role="status" aria-live="polite"></div>' +
     '</div>';
   }
 
@@ -418,6 +416,7 @@
       var on = t.getAttribute('data-view') === id;
       if (on) { t.setAttribute('aria-current', 'page'); activeTab = t; } else t.removeAttribute('aria-current');
     });
+    document.body.classList.toggle('is-room', id === 'uzio-ai'); /* the Uzio AI room is one fixed screen: no title, no scrolling */
     root.style.setProperty('--accent', v.c);
     if (v.ink) root.style.setProperty('--accent-ink', v.ink); else root.style.removeProperty('--accent-ink');
     moveDrop(activeTab);
