@@ -129,17 +129,18 @@
    ====================================================================== */
 .uzio-orb.away { display: none !important; } /* the corner chatbot is removed while the room is open */
 
-.room { --room-accent: var(--accent, #ffa11a); flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: uaiIn .5s cubic-bezier(.32, 1.25, .45, 1) both; }
+.room { --orb-size: .77; /* Uzio's size in the room: 1 = the old size */
+  --room-accent: var(--accent, #ffa11a); flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: uaiIn .5s cubic-bezier(.32, 1.25, .45, 1) both; }
 
 /* the stage is just the free space above the chat: the orb scales to it */
 .room-stage { position: relative; flex: 1; min-height: 0; width: 100%; container-type: size; }
 .room-glow {
-  position: absolute; left: 50%; top: 50%; width: min(96cqh, 100cqw); aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 0; border-radius: 50%; pointer-events: none;
+  position: absolute; left: 50%; top: 50%; width: calc(min(96cqh, 100cqw) * var(--orb-size)); aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 0; border-radius: 50%; pointer-events: none;
   background: radial-gradient(circle, color-mix(in srgb, var(--room-accent) 34%, transparent), transparent 68%);
   animation: roomBreath 4.2s ease-in-out infinite;
 }
 /* the canvas has transparent margins around the glass sphere, so the box is a bit bigger than the stage */
-.room-orb { position: absolute; left: 50%; top: 50%; width: min(60dvh, 100%); width: min(122cqh, 100cqw, 760px); aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 2; cursor: pointer; }
+.room-orb { position: absolute; left: 50%; top: 50%; width: calc(min(60dvh, 100%) * var(--orb-size)); width: calc(min(122cqh, 100cqw, 760px) * var(--orb-size)); aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 2; cursor: pointer; }
 .room-orb .orb-body { position: absolute; inset: 0; width: 100%; height: 100%; animation: orbfloat 4.2s ease-in-out infinite; filter: drop-shadow(0 18px 22px var(--orb-shadow, rgba(60, 70, 150, .3))); }
 .room-orb canvas { display: block; width: 100%; height: 100%; }
 .room-orb.no-gl canvas { background: conic-gradient(from 0deg, #1ea7ff, #ff2d75, #b8ff1f, #b44dff, #ffa11a, #1ea7ff); clip-path: circle(37%); }
@@ -218,3 +219,28 @@
   .room, .room-glow, .room-orb .orb-body { animation: none; }
 }
 .uai--room .uai-input:focus-visible { outline: none; }
+
+/* ---------- wide screens: history opens on the left, Uzio slides to the right ---------- */
+@media (min-width: 900px) {
+  .room { position: relative; container-type: inline-size; }
+  /* let the history pop-up measure itself against the whole room, not the narrow chat bar */
+  .room .room-chat, .room .uai.uai--room { position: static; }
+
+  .room .uai--room .uai-log {
+    left: 12px; right: auto; top: 8px; bottom: 56px; /* 48px input bar + 8px gap */
+    width: calc(42% - 12px); max-height: none; z-index: 6;
+    transform: translateX(-24px); transform-origin: 0 50%;
+  }
+  .room .uai--room.hist-open .uai-log { transform: none; }
+
+  .room .room-orb, .room .room-glow { transition: left .55s cubic-bezier(.32, 1.15, .45, 1), width .55s cubic-bezier(.32, 1.15, .45, 1); }
+  .room:has(.uai--room.hist-open) .room-orb { left: 71%; width: calc(min(122cqh, 56cqw, 760px) * var(--orb-size)); }
+  .room:has(.uai--room.hist-open) .room-glow { left: 71%; width: calc(min(96cqh, 56cqw) * var(--orb-size)); }
+
+  /* quick replies follow Uzio so the history doesn't cover them */
+  .room .uai--room .uai-chips { position: relative; left: 0; align-self: center; width: 100%; transition: left .55s cubic-bezier(.32, 1.15, .45, 1); }
+  .room .uai--room.hist-open .uai-chips { left: 21cqw; width: min(100%, 56cqw); }
+}
+@media (min-width: 900px) and (prefers-reduced-motion: reduce) {
+  .room .room-orb, .room .room-glow, .room .uai--room .uai-chips { transition: none; }
+}
