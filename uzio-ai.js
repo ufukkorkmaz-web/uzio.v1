@@ -673,7 +673,7 @@
   function speakEl() { return doc.querySelector('.room-speak'); }
   function roomEl() { return doc.querySelector('.room'); }
   function micDis(v) { if (micBtn) micBtn.disabled = v; var sp = speakEl(); if (sp && SR) sp.disabled = v; }
-  function roomMood(cls, on) { var r = roomEl(); if (r) r.classList.toggle(cls, !!on); }
+  function roomMood(cls, on) { if (on) stopAntic(); var r = roomEl(); if (r) r.classList.toggle(cls, !!on); }
   function cur(on) { if (win.UzioCursor) win.UzioCursor.busy('chat', on); } /* spinning ring by the cursor while Uzio is thinking */
   var returnFocus = null;
 
@@ -1089,6 +1089,44 @@
       if (link) link.dispatchEvent(new MouseEvent('click', { bubbles: false, cancelable: true }));
     }
   });
+
+  /* ---------- random antics: every so often an idle Uzio entertains itself ---------- */
+  var antic = null, lastAntic = -1;
+  function stopAntic() { if (antic) { antic.cancel(); antic = null; } }
+  function move(body, frames, ms) { antic = body.animate(frames, { duration: ms, easing: 'ease-in-out' }); }
+  var ANTICS = [
+    function wiggle(body) {
+      move(body, [{ rotate: '0deg' }, { rotate: '-12deg', scale: '1.04 .96' }, { rotate: '11deg', scale: '.96 1.04' }, { rotate: '-8deg' }, { rotate: '6deg' }, { rotate: '0deg' }], 1100);
+    },
+    function loop(body) { /* a small circle through the air, face staying upright */
+      move(body, [{ translate: '0 0', rotate: '0deg' }, { translate: '7% -4%', rotate: '9deg' }, { translate: '0 -12%', rotate: '0deg' }, { translate: '-7% -4%', rotate: '-9deg' }, { translate: '0 0', rotate: '0deg' }], 1500);
+    },
+    function bubbles(body, host) {
+      move(body, [{ scale: '1' }, { scale: '1.07', offset: .35 }, { scale: '.96', offset: .55 }, { scale: '1' }], 1400); /* breathe in, puff out */
+      for (var i = 0; i < 6; i++) {
+        var b = doc.createElement('span'); b.className = 'uzio-bubble';
+        var size = 3 + Math.random() * 5; b.style.width = b.style.height = size + '%';
+        host.appendChild(b);
+        var x = -60 - Math.random() * 220, y = -120 - Math.random() * 380; /* percent of the bubble's own size */
+        var a = b.animate(
+          [{ opacity: 0, translate: '0 0', scale: '.2' }, { opacity: 1, offset: .2 }, { opacity: .9, offset: .8 }, { opacity: 0, translate: x + '% ' + y + '%', scale: '1.2' }],
+          { duration: 1800 + Math.random() * 900, delay: 450 + i * 130, easing: 'ease-out', fill: 'both' });
+        a.onfinish = (function (el) { return function () { el.remove(); }; })(b);
+      }
+    }
+  ];
+  function playAntic() {
+    var host = doc.getElementById('roomOrb'), typed = input && input.value;
+    if (reduce || doc.hidden || !state.room || state.busy || rec || fly || typed || orbAt !== 'room' || !host || !orbBodyEl || !orbBodyEl.animate) return;
+    var n = Math.floor(Math.random() * (ANTICS.length - 1));
+    if (n >= lastAntic && lastAntic > -1) n++; /* never the same one twice in a row */
+    lastAntic = n;
+    stopAntic(); ANTICS[n](orbBodyEl, host);
+  }
+  (function scheduleAntic() {
+    setTimeout(function () { playAntic(); scheduleAntic(); }, 7000 + Math.random() * 8000); /* every 7 to 15 seconds */
+  })();
+  doc.addEventListener('input', function (e) { if (e.target.classList && e.target.classList.contains('uai-input')) stopAntic(); });
 
   /* the orb opens the chat instead of navigating (the href stays as a no-JS fallback) */
   doc.addEventListener('click', function (e) {
