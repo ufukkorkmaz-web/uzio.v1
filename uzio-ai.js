@@ -458,28 +458,28 @@
   var UI = {
     en: { title: 'Uzio AI', sub: 'Knows everything about Uzio', ph: 'Ask me anything about Uzio…', send: 'Send', close: 'Close', reset: 'New chat', open: 'Open Uzio AI',
           thinking: 'Uzio is typing', mic: 'Voice input', micStop: 'Stop listening', listening: 'Listening…', speak: 'Speak to Uzio', speakStop: 'Listening… tap to stop', speakNo: 'Voice isn’t supported in this browser',
-          micFile: '⚠️ Voice input doesn’t work when the page is opened as a file on your computer. Put the site online (https) or run it from a local server (localhost), then try again.', micBlocked: 'I can’t use the microphone. Allow microphone access for this site in your browser settings, then tap 🎤 again.', micNone: 'I didn’t catch that. Tap 🎤 and try again.', micNoDevice: 'I can’t find a microphone on this device.', micNet: 'Voice input needs an internet connection (your browser’s speech service). You can still type to me.', micErr: 'Voice input hit a snag. You can still type to me.',
+          micFile: '⚠️ Voice input doesn’t work when the page is opened as a file on your computer. Put the site online (https) or run it from a local server (localhost), then try again.', micDead: '⚠️ I can’t hear your microphone. Check that the right microphone is selected and allowed for this site (lock icon in the address bar), then tap Speak again.', micBlocked: 'I can’t use the microphone. Allow microphone access for this site in your browser settings, then tap 🎤 again.', micNone: 'I didn’t catch that. Tap 🎤 and try again.', micNoDevice: 'I can’t find a microphone on this device.', micNet: 'Voice input needs an internet connection (your browser’s speech service). You can still type to me.', micErr: 'Voice input hit a snag. You can still type to me.',
           fallback: 'I only know Uzio, and I couldn’t find that on the site. Here are things I can help with:',
           greetNamed: 'Hey {n}! 👋 I’m Uzio. I know every corner of this site, and I can invent challenges for you. What are you curious about?',
           greet: 'Hey! 👋 I’m Uzio. I know every corner of this site, and I can invent challenges for you. What are you curious about?',
           more: 'Here’s where we can go next:', related: 'You might also like:' },
     tr: { title: 'Uzio AI', sub: 'Uzio hakkında her şeyi bilir', ph: 'Uzio hakkında her şeyi sor…', send: 'Gönder', close: 'Kapat', reset: 'Yeni sohbet', open: 'Uzio AI’ı aç',
           thinking: 'Uzio yazıyor', mic: 'Sesli giriş', micStop: 'Dinlemeyi durdur', listening: 'Dinliyorum…', speak: 'Uzio ile konuş', speakStop: 'Dinliyorum… durdurmak için dokun', speakNo: 'Bu tarayıcı sesi desteklemiyor',
-          micFile: '⚠️ Sayfa bilgisayarında dosya olarak açıldığında sesli giriş çalışmaz. Siteyi çevrimiçi (https) yayınla veya yerel sunucudan (localhost) çalıştır, sonra tekrar dene.', micBlocked: 'Mikrofonu kullanamıyorum. Tarayıcı ayarlarından bu site için mikrofon iznini aç, sonra 🎤’a tekrar dokun.', micNone: 'Seni duyamadım. 🎤’a dokunup tekrar dene.', micNoDevice: 'Bu cihazda mikrofon bulamıyorum.', micNet: 'Sesli giriş internet bağlantısı gerektirir (tarayıcının konuşma servisi). Yine de yazabilirsin.', micErr: 'Sesli girişte bir sorun çıktı. Yine de yazabilirsin.',
+          micFile: '⚠️ Sayfa bilgisayarında dosya olarak açıldığında sesli giriş çalışmaz. Siteyi çevrimiçi (https) yayınla veya yerel sunucudan (localhost) çalıştır, sonra tekrar dene.', micDead: '⚠️ Mikrofonunu duyamıyorum. Doğru mikrofonun seçili ve bu site için izinli olduğunu kontrol et (adres çubuğundaki kilit simgesi), sonra tekrar Konuş’a dokun.', micBlocked: 'Mikrofonu kullanamıyorum. Tarayıcı ayarlarından bu site için mikrofon iznini aç, sonra 🎤’a tekrar dokun.', micNone: 'Seni duyamadım. 🎤’a dokunup tekrar dene.', micNoDevice: 'Bu cihazda mikrofon bulamıyorum.', micNet: 'Sesli giriş internet bağlantısı gerektirir (tarayıcının konuşma servisi). Yine de yazabilirsin.', micErr: 'Sesli girişte bir sorun çıktı. Yine de yazabilirsin.',
           fallback: 'Ben sadece Uzio’yu biliyorum ve bunu sitede bulamadım. Şunlarda yardımcı olabilirim:',
           greetNamed: 'Selam {n}! 👋 Ben Uzio. Bu sitenin her köşesini biliyorum ve senin için meydan okumalar icat edebilirim. Neyi merak ediyorsun?',
           greet: 'Selam! 👋 Ben Uzio. Bu sitenin her köşesini biliyorum ve senin için meydan okumalar icat edebilirim. Neyi merak ediyorsun?',
           more: 'Şuradan devam edebiliriz:', related: 'Bunlar da ilgini çekebilir:' },
     fr: { title: 'Uzio AI', sub: 'Sait tout sur Uzio', ph: 'Demande-moi tout sur Uzio…', send: 'Envoyer', close: 'Fermer', reset: 'Nouveau chat', open: 'Ouvrir Uzio AI',
           thinking: 'Uzio écrit', mic: 'Saisie vocale', micStop: 'Arrêter l’écoute', listening: 'J’écoute…', speak: 'Parler à Uzio', speakStop: 'J’écoute… touche pour arrêter', speakNo: 'La voix n’est pas prise en charge par ce navigateur',
-          micFile: '⚠️ La saisie vocale ne marche pas quand la page est ouverte comme un fichier sur ton ordinateur. Mets le site en ligne (https) ou lance-le depuis un serveur local (localhost), puis réessaie.', micBlocked: 'Je ne peux pas utiliser le micro. Autorise l’accès au micro pour ce site dans les réglages du navigateur, puis touche 🎤 à nouveau.', micNone: 'Je n’ai pas compris. Touche 🎤 et réessaie.', micNoDevice: 'Je ne trouve pas de micro sur cet appareil.', micNet: 'La saisie vocale nécessite une connexion internet (le service vocal de ton navigateur). Tu peux toujours écrire.', micErr: 'La saisie vocale a rencontré un souci. Tu peux toujours écrire.',
+          micFile: '⚠️ La saisie vocale ne marche pas quand la page est ouverte comme un fichier sur ton ordinateur. Mets le site en ligne (https) ou lance-le depuis un serveur local (localhost), puis réessaie.', micDead: '⚠️ Je n’entends pas ton micro. Vérifie que le bon micro est sélectionné et autorisé pour ce site (icône de cadenas dans la barre d’adresse), puis touche Parler à nouveau.', micBlocked: 'Je ne peux pas utiliser le micro. Autorise l’accès au micro pour ce site dans les réglages du navigateur, puis touche 🎤 à nouveau.', micNone: 'Je n’ai pas compris. Touche 🎤 et réessaie.', micNoDevice: 'Je ne trouve pas de micro sur cet appareil.', micNet: 'La saisie vocale nécessite une connexion internet (le service vocal de ton navigateur). Tu peux toujours écrire.', micErr: 'La saisie vocale a rencontré un souci. Tu peux toujours écrire.',
           fallback: 'Je ne connais qu’Uzio et je n’ai pas trouvé ça sur le site. Voici ce dont je peux parler :',
           greetNamed: 'Salut {n} ! 👋 Je suis Uzio. Je connais chaque recoin de ce site et je peux inventer des défis pour toi. Qu’est-ce qui te fait envie ?',
           greet: 'Salut ! 👋 Je suis Uzio. Je connais chaque recoin de ce site et je peux inventer des défis pour toi. Qu’est-ce qui te fait envie ?',
           more: 'Voici où on peut aller ensuite :', related: 'Ça pourrait aussi t’intéresser :' },
     de: { title: 'Uzio AI', sub: 'Weiß alles über Uzio', ph: 'Frag mich alles über Uzio…', send: 'Senden', close: 'Schließen', reset: 'Neuer Chat', open: 'Uzio AI öffnen',
           thinking: 'Uzio tippt', mic: 'Spracheingabe', micStop: 'Zuhören beenden', listening: 'Ich höre zu…', speak: 'Mit Uzio sprechen', speakStop: 'Ich höre zu… tippen zum Beenden', speakNo: 'Sprache wird von diesem Browser nicht unterstützt',
-          micFile: '⚠️ Spracheingabe funktioniert nicht, wenn die Seite als Datei auf deinem Computer geöffnet wird. Stelle die Seite online (https) oder starte sie über einen lokalen Server (localhost) und versuche es erneut.', micBlocked: 'Ich kann das Mikrofon nicht nutzen. Erlaube den Mikrofonzugriff für diese Seite in den Browsereinstellungen und tippe dann erneut auf 🎤.', micNone: 'Das habe ich nicht verstanden. Tippe auf 🎤 und versuche es nochmal.', micNoDevice: 'Ich finde auf diesem Gerät kein Mikrofon.', micNet: 'Spracheingabe braucht eine Internetverbindung (der Sprachdienst deines Browsers). Du kannst mir trotzdem schreiben.', micErr: 'Bei der Spracheingabe ist etwas schiefgelaufen. Du kannst mir trotzdem schreiben.',
+          micFile: '⚠️ Spracheingabe funktioniert nicht, wenn die Seite als Datei auf deinem Computer geöffnet wird. Stelle die Seite online (https) oder starte sie über einen lokalen Server (localhost) und versuche es erneut.', micDead: '⚠️ Ich höre dein Mikrofon nicht. Prüfe, ob das richtige Mikrofon ausgewählt und für diese Seite erlaubt ist (Schloss-Symbol in der Adressleiste), und tippe erneut auf Sprechen.', micBlocked: 'Ich kann das Mikrofon nicht nutzen. Erlaube den Mikrofonzugriff für diese Seite in den Browsereinstellungen und tippe dann erneut auf 🎤.', micNone: 'Das habe ich nicht verstanden. Tippe auf 🎤 und versuche es nochmal.', micNoDevice: 'Ich finde auf diesem Gerät kein Mikrofon.', micNet: 'Spracheingabe braucht eine Internetverbindung (der Sprachdienst deines Browsers). Du kannst mir trotzdem schreiben.', micErr: 'Bei der Spracheingabe ist etwas schiefgelaufen. Du kannst mir trotzdem schreiben.',
           fallback: 'Ich kenne nur Uzio und habe das auf der Seite nicht gefunden. Dabei kann ich helfen:',
           greetNamed: 'Hey {n}! 👋 Ich bin Uzio. Ich kenne jede Ecke dieser Seite und kann Challenges für dich erfinden. Was interessiert dich?',
           greet: 'Hey! 👋 Ich bin Uzio. Ich kenne jede Ecke dieser Seite und kann Challenges für dich erfinden. Was interessiert dich?',
@@ -832,19 +832,41 @@
     if (sp) { sp.classList.toggle('on', on); sp.setAttribute('aria-pressed', String(on)); var st = sp.querySelector('.room-speak-t'); if (st) st.textContent = on ? ui.speakStop : ui.speak; sp.setAttribute('aria-label', st ? st.textContent : ui.speak); }
     input.placeholder = on ? ui.listening : ui.ph;
   }
+  var micTimers = [];
+  function clearMicTimers() { micTimers.forEach(clearTimeout); micTimers = []; }
   function stopMic(abort) {
     if (!rec) return;
+    var r = rec;
     recAborted = !!abort;
-    try { abort ? rec.abort() : rec.stop(); } catch (e) {}
+    try { abort ? r.abort() : r.stop(); } catch (e) {}
+    /* some browsers never fire "end" after stop() (e.g. when no audio ever arrived): force the reset so the button never gets stuck */
+    micTimers.push(setTimeout(function () {
+      if (rec !== r) return;
+      try { r.abort(); } catch (e) {}
+      if (r.__end) r.__end(true);
+    }, abort ? 150 : 900));
   }
   function startMic() {
     if (!SR || state.busy || rec) return;
-    var lang = curLang(), ui = UI[lang], finalText = '', errored = false;
+    var lang = curLang(), ui = UI[lang], finalText = '', errored = false, ended = false, audioOk = false;
     var r = new SR();
     r.lang = SR_LANG[lang]; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
     recAborted = false; input.value = ''; sendBtn.disabled = true;
-    r.onstart = function () { micUI(true); roomStatus(ui.listening, true); };
+    function end(forced) {
+      if (ended) return; ended = true; clearMicTimers();
+      var t = (finalText || input.value).trim();
+      if (rec === r) rec = null;
+      micUI(false); input.value = ''; if (!errored) roomStatus('');
+      if (recAborted || errored) return;
+      if (t) ask(voiceFix(t)); else note(ui.micNone);
+    }
+    r.__end = end;
+    function heard() { audioOk = true; }
+    r.onstart = function () { if (ended) return; micUI(true); roomStatus(ui.listening, true); };
+    r.onaudiostart = heard; r.onsoundstart = heard; r.onspeechstart = heard;
     r.onresult = function (e) {
+      if (ended) return;
+      heard();
       var interim = '';
       for (var i = e.resultIndex; i < e.results.length; i++) {
         var res = e.results[i];
@@ -854,6 +876,7 @@
       roomStatus(input.value, true);
     };
     r.onerror = function (e) {
+      if (ended) return;
       errored = true;
       var err = e && e.error;
       if (err === 'aborted') return;
@@ -861,14 +884,17 @@
       if (win.location.protocol === 'file:' && (err === 'not-allowed' || err === 'service-not-allowed')) { note(ui.micFile); return; }
       note(ui[err === 'not-allowed' || err === 'service-not-allowed' ? 'micBlocked' : err === 'no-speech' ? 'micNone' : err === 'audio-capture' ? 'micNoDevice' : err === 'network' ? 'micNet' : 'micErr']);
     };
-    r.onend = function () {
-      var t = (finalText || input.value).trim();
-      rec = null; micUI(false); input.value = ''; if (!errored) roomStatus('');
-      if (recAborted || errored) return;
-      if (t) ask(voiceFix(t)); else note(ui.micNone);
-    };
+    r.onend = function () { end(false); };
     rec = r;
-    try { r.start(); } catch (e) { rec = null; micUI(false); note(ui.micErr); }
+    try { r.start(); } catch (e) { rec = null; ended = true; micUI(false); note(ui.micErr); return; }
+    /* watchdogs: no audio at all after 7s means the microphone isn't delivering; and never listen for more than 20s */
+    micTimers.push(setTimeout(function () {
+      if (rec !== r || audioOk) return;
+      errored = true; note(ui.micDead);
+      try { r.abort(); } catch (e) {}
+      end(true);
+    }, 7000));
+    micTimers.push(setTimeout(function () { if (rec === r) stopMic(); }, 20000));
   }
 
   function reset() {
