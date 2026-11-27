@@ -131,7 +131,7 @@
 .room { --room-accent: var(--accent, #ffa11a); max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 16px; animation: uaiIn .5s cubic-bezier(.32, 1.25, .45, 1) both; }
 
 .room-stage {
-  position: relative; width: 100%; height: clamp(210px, 31vh, 290px); border-radius: 32px; overflow: hidden; isolation: isolate;
+  position: relative; width: 100%; height: clamp(250px, 36vh, 340px); border-radius: 32px; overflow: hidden; isolation: isolate;
   background:
     radial-gradient(ellipse 60% 70% at 50% 62%, color-mix(in srgb, var(--room-accent) 26%, transparent), transparent 70%),
     linear-gradient(180deg, color-mix(in srgb, var(--card, #fff) 92%, var(--room-accent)) 0 62%, color-mix(in srgb, var(--card, #fff) 80%, var(--fg, #000) 8%) 62% 100%);
@@ -145,16 +145,16 @@
     repeating-linear-gradient(90deg, transparent 0 46px, color-mix(in srgb, var(--fg, #000) 7%, transparent) 46px 47px);
 }
 .room-glow {
-  position: absolute; left: 50%; top: 46%; width: 300px; height: 300px; margin: -150px 0 0 -150px; z-index: 0; border-radius: 50%; pointer-events: none;
+  position: absolute; left: 50%; top: 46%; width: 380px; height: 380px; margin: -190px 0 0 -190px; z-index: 0; border-radius: 50%; pointer-events: none;
   background: radial-gradient(circle, color-mix(in srgb, var(--room-accent) 40%, transparent), transparent 68%);
   animation: roomBreath 4.2s ease-in-out infinite;
 }
-.room-orb { position: absolute; left: 50%; top: 46%; width: 200px; height: 200px; margin: -100px 0 0 -100px; z-index: 2; cursor: pointer; }
+.room-orb { position: absolute; left: 50%; top: 46%; width: 260px; height: 260px; margin: -130px 0 0 -130px; z-index: 2; cursor: pointer; }
 .room-orb .orb-body { position: absolute; inset: 0; width: 100%; height: 100%; animation: orbfloat 4.2s ease-in-out infinite; filter: drop-shadow(0 14px 18px var(--orb-shadow, rgba(60, 70, 150, .3))); }
 .room-orb canvas { display: block; width: 100%; height: 100%; }
 .room-orb.no-gl canvas { background: conic-gradient(from 0deg, #1ea7ff, #ff2d75, #b8ff1f, #b44dff, #ffa11a, #1ea7ff); clip-path: circle(37%); }
 .room-shadow {
-  position: absolute; left: 50%; top: 79%; width: 150px; height: 20px; margin-left: -75px; z-index: 1; border-radius: 50%; pointer-events: none;
+  position: absolute; left: 50%; top: 82%; width: 190px; height: 22px; margin-left: -95px; z-index: 1; border-radius: 50%; pointer-events: none;
   background: radial-gradient(ellipse, rgba(0, 0, 0, .3), transparent 70%); animation: roomShadow 4.2s ease-in-out infinite;
 }
 /* Uzio reacts: a ring while listening, a gentle pulse while thinking */
@@ -191,9 +191,10 @@
 @keyframes roomShadow { 0%, 100% { transform: scaleX(1); opacity: .9; } 50% { transform: scaleX(.86); opacity: .6; } }
 
 @media (max-width: 640px) {
-  .room-stage { height: 230px; border-radius: 26px; }
-  .room-orb { width: 160px; height: 160px; margin: -80px 0 0 -80px; }
-  .room-shadow { width: 120px; margin-left: -60px; }
+  .room-stage { height: 270px; border-radius: 26px; }
+  .room-orb { width: 210px; height: 210px; margin: -105px 0 0 -105px; }
+  .room-glow { width: 300px; height: 300px; margin: -150px 0 0 -150px; }
+  .room-shadow { width: 150px; margin-left: -75px; }
   .uai.uai--room { height: min(360px, 46dvh); border-radius: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -201,3 +202,5 @@
 }
 .room-chat { width: 100%; min-width: 0; }
 @media (max-width: 640px) { .room { padding-bottom: 96px; } } /* keeps the speak button clear of the bottom tab bar */
+
+.room-status { min-height: 20px; margin-top: -6px; max-width: 100%; padding: 0 12px; text-align: center; font-size: 14px; color: var(--fg2, rgba(60, 60, 67, .62)); overflow-wrap: anywhere; }
