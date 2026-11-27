@@ -378,6 +378,7 @@
       '<div class="room-stage"><div class="room-glow"></div><div class="room-orb" id="roomOrb"></div><div class="room-shadow"></div></div>' +
       '<div class="room-chat" id="roomChat"></div>' +
       '<button class="room-speak" type="button" data-room="speak" aria-pressed="false"><span class="room-speak-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></span><span class="room-speak-t">Speak</span></button>' +
+      '<div class="room-status" id="roomStatus" role="status" aria-live="polite"></div>' +
     '</div>';
   }
 
@@ -738,7 +739,7 @@
 
     function fit() {
       var d = Math.min(window.devicePixelRatio || 1, 2);
-      var w = Math.round(cv.clientWidth * d);
+      var w = Math.max(512, Math.round(cv.clientWidth * d)); /* always at least the landing page's 512px, so the orb stays sharp when it grows */
       if (w && cv.width !== w) { cv.width = w; cv.height = w; }
       gl.viewport(0, 0, cv.width, cv.height);
     }
