@@ -261,3 +261,19 @@ body .room .uai--room .uai-form { padding: 10px 14px 14px; }
   body .room .room-stage { grid-area: 1 / 1; }
   body .room .room-chat { grid-area: 2 / 1; }
 }
+
+/* ---------- fill the whole screen ---------- */
+/* widen every wrapper around the room (they were squeezing it into a narrow column) */
+body :has(.room) { max-width: none !important; width: 100% !important; margin-inline: 0 !important; padding-inline: 0 !important; box-sizing: border-box; }
+body .room {
+  /* and span the full window even if a wrapper still holds it back */
+  position: relative; left: 50%; align-self: flex-start; flex-shrink: 0;
+  width: 100vw !important; max-width: none !important; margin: 0 0 0 -50vw !important;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; padding: 8px 24px 4px;
+}
+body .room .room-stage .room-orb,
+body .room .room-stage .room-glow { width: min(100cqw, 100cqh) !important; }
+body .room .uai--room .uai-msg { max-width: min(75%, 640px); font-size: 16px; }
+@media (max-width: 899px) {
+  body .room { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 0 10px 4px; }
+}
