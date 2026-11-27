@@ -1,50 +1,333 @@
-/* Uzio cursors: a neon-teal arrow, a pointing hand, a text beam and a loading ring.
-   Pure CSS (SVG data URIs), so there is no lag. The spinning loading ring is added by uzio-cursor.js.
-   To go back to the system cursors, set  <html data-cursor="system">. */
-:root:not([data-cursor="system"]) {
-  --uz-arrow: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22 viewBox=%220 0 32 32%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 gradientUnits=%22userSpaceOnUse%22 x1=%226%22 y1=%224%22 x2=%2222%22 y2=%2226%22%3E%3Cstop offset=%220%22 stop-color=%22%23b8fff6%22/%3E%3Cstop offset=%22.45%22 stop-color=%22%2319f0d8%22/%3E%3Cstop offset=%221%22 stop-color=%22%2300b9d4%22/%3E%3C/linearGradient%3E%3Cfilter id=%22s%22 x=%22-30%25%22 y=%22-30%25%22 width=%22170%25%22 height=%22170%25%22%3E%3CfeDropShadow dx=%220%22 dy=%22.6%22 stdDeviation=%22.8%22 flood-color=%22%2300e5cc%22 flood-opacity=%22.55%22/%3E%3C/filter%3E%3Cpath id=%22p%22 d=%22M5.2 3.6 L27 15.3 Q28.2 16 26.9 16.7 C21.2 19 16 22.6 12.7 28 Q11.9 29.2 11.3 27.9 L3.9 5 Q3.6 3.9 5.2 3.6 Z%22/%3E%3C/defs%3E%3Cg filter=%22url(%23s)%22%3E%3Cuse href=%22%23p%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%223.6%22 stroke-linejoin=%22round%22/%3E%3Cuse href=%22%23p%22 fill=%22%2306404a%22 stroke=%22%2306404a%22 stroke-width=%221.8%22 stroke-linejoin=%22round%22/%3E%3Cuse href=%22%23p%22 fill=%22url(%23g)%22/%3E%3C/g%3E%3Cpath d=%22M6.4 8.4 L10.4 22%22 fill=%22none%22 stroke=%22%23fff%22 stroke-opacity=%22.65%22 stroke-width=%221.1%22 stroke-linecap=%22round%22/%3E%3C/svg%3E") 5 4, default;
-  --uz-hand: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22 viewBox=%220 0 32 32%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 gradientUnits=%22userSpaceOnUse%22 x1=%228%22 y1=%223%22 x2=%2224%22 y2=%2229%22%3E%3Cstop offset=%220%22 stop-color=%22%23b8fff6%22/%3E%3Cstop offset=%22.5%22 stop-color=%22%2319f0d8%22/%3E%3Cstop offset=%221%22 stop-color=%22%2300b9d4%22/%3E%3C/linearGradient%3E%3Cfilter id=%22s%22 x=%22-30%25%22 y=%22-30%25%22 width=%22170%25%22 height=%22170%25%22%3E%3CfeDropShadow dx=%220%22 dy=%22.6%22 stdDeviation=%22.8%22 flood-color=%22%2300e5cc%22 flood-opacity=%22.55%22/%3E%3C/filter%3E%3Cg id=%22h%22%3E%3Crect x=%2211%22 y=%222.6%22 width=%225.2%22 height=%2218%22 rx=%222.6%22/%3E%3Crect x=%2216%22 y=%2211%22 width=%224.6%22 height=%2213%22 rx=%222.3%22/%3E%3Crect x=%2220.4%22 y=%2211.8%22 width=%224.4%22 height=%2212%22 rx=%222.2%22/%3E%3Crect x=%2224.6%22 y=%2213.4%22 width=%224%22 height=%2210.6%22 rx=%222%22/%3E%3Crect x=%228.4%22 y=%2215.4%22 width=%2220.2%22 height=%2213.4%22 rx=%226.4%22/%3E%3Crect x=%223.4%22 y=%2214.8%22 width=%225.4%22 height=%2211%22 rx=%222.7%22 transform=%22rotate(-26 6 20)%22/%3E%3C/g%3E%3C/defs%3E%3Cg filter=%22url(%23s)%22%3E%3Cuse href=%22%23h%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%224.2%22 stroke-linejoin=%22round%22/%3E%3Cuse href=%22%23h%22 fill=%22%2306404a%22 stroke=%22%2306404a%22 stroke-width=%222%22 stroke-linejoin=%22round%22/%3E%3Cuse href=%22%23h%22 fill=%22url(%23g)%22/%3E%3C/g%3E%3Cpath d=%22M13 5.4V13%22 stroke=%22%23fff%22 stroke-opacity=%22.7%22 stroke-width=%221.2%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M18.3 14V19M22.6 14.6V19.6M26.6 16V20.4%22 stroke=%22%2306404a%22 stroke-opacity=%22.45%22 stroke-width=%221%22 stroke-linecap=%22round%22/%3E%3C/svg%3E") 13 3, pointer;
-  --uz-wait: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22 viewBox=%220 0 32 32%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 gradientUnits=%22userSpaceOnUse%22 x1=%227%22 y1=%228%22 x2=%2225%22 y2=%2224%22%3E%3Cstop offset=%220%22 stop-color=%22%23b8fff6%22/%3E%3Cstop offset=%22.5%22 stop-color=%22%2319f0d8%22/%3E%3Cstop offset=%221%22 stop-color=%22%2300b9d4%22/%3E%3C/linearGradient%3E%3Cfilter id=%22s%22 x=%22-30%25%22 y=%22-30%25%22 width=%22160%25%22 height=%22160%25%22%3E%3CfeDropShadow dx=%220%22 dy=%22.6%22 stdDeviation=%22.8%22 flood-color=%22%2300e5cc%22 flood-opacity=%22.55%22/%3E%3C/filter%3E%3C/defs%3E%3Cg filter=%22url(%23s)%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%229%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%227.4%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%229%22 fill=%22none%22 stroke=%22%2306404a%22 stroke-width=%225.2%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%229%22 fill=%22none%22 stroke=%22url(%23g)%22 stroke-width=%223%22 stroke-linecap=%22round%22 stroke-dasharray=%2239 17.6%22 transform=%22rotate(-90 16 16)%22/%3E%3C/g%3E%3C/svg%3E") 16 16, wait;
-  --uz-text: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22 viewBox=%220 0 32 32%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 gradientUnits=%22userSpaceOnUse%22 x1=%2216%22 y1=%225%22 x2=%2216%22 y2=%2227%22%3E%3Cstop offset=%220%22 stop-color=%22%23b8fff6%22/%3E%3Cstop offset=%22.5%22 stop-color=%22%2319f0d8%22/%3E%3Cstop offset=%221%22 stop-color=%22%2300b9d4%22/%3E%3C/linearGradient%3E%3Cfilter id=%22s%22 x=%22-60%25%22 y=%22-20%25%22 width=%22220%25%22 height=%22140%25%22%3E%3CfeDropShadow dx=%220%22 dy=%22.6%22 stdDeviation=%22.8%22 flood-color=%22%2300e5cc%22 flood-opacity=%22.55%22/%3E%3C/filter%3E%3Cpath id=%22t%22 d=%22M11.5 5.5H20.5M16 5.5V26.5M11.5 26.5H20.5%22/%3E%3C/defs%3E%3Cg filter=%22url(%23s)%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cuse href=%22%23t%22 stroke=%22%23fff%22 stroke-width=%225.6%22/%3E%3Cuse href=%22%23t%22 stroke=%22%2306404a%22 stroke-width=%223.6%22/%3E%3Cuse href=%22%23t%22 stroke=%22url(%23g)%22 stroke-width=%221.8%22/%3E%3C/g%3E%3C/svg%3E") 16 16, text;
+/* Uzio AI chat panel. Uses the site's own theme variables, so light/dark and accent colours just work. */
+.uai {
+  --uai-accent: var(--accent, #007AFF);
+  position: fixed; z-index: 90;
+  right: var(--uai-r, max(14px, env(safe-area-inset-right, 0px)));
+  bottom: var(--uai-b, calc(18px + env(safe-area-inset-bottom, 0px)));
+  width: min(400px, calc(100vw - 28px));
+  height: min(620px, calc(100dvh - 40px));
+  display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 28px;
+  color: var(--fg, #000); font-family: inherit;
+  background: color-mix(in srgb, var(--card, #fff) 80%, transparent);
+  -webkit-backdrop-filter: blur(34px) saturate(1.8); backdrop-filter: blur(34px) saturate(1.8);
+  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .7)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)),
+    var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .14)), 0 24px 60px color-mix(in srgb, var(--uai-accent) 16%, transparent);
+  transform-origin: 90% 100%;
+  opacity: 0; visibility: hidden; transform: translateY(18px) scale(.92);
+  transition: opacity .25s ease, transform .45s cubic-bezier(.32, 1.25, .45, 1), visibility 0s linear .45s;
+}
+/* on the game hub the chat grows from the exact spot where the orb sits (--uai-r / --uai-b are measured in JS) */
+.uai--hub { height: min(620px, calc(100dvh - var(--uai-b, 18px) - 84px)); }
+.uai.open { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+
+.uai-head { display: flex; align-items: center; gap: 12px; padding: 14px 12px 12px 16px; border-bottom: .5px solid var(--sep, rgba(60, 60, 67, .2)); }
+/* the header slot holds the real Uzio orb (moved here from the page when the chat opens) */
+.uai-av { position: relative; flex: none; width: 64px; height: 64px; margin: -10px -4px -10px -8px; }
+.uai-av .orb-body, .uai-fly .orb-body {
+  position: absolute; inset: 0; width: 100%; height: 100%; animation: none;
+  filter: drop-shadow(0 4px 8px var(--orb-shadow, rgba(60, 70, 150, .25)));
+}
+/* welcome window: the real orb replaces the old "U" badge */
+.onb-orb.has-orb { overflow: visible; background: none; box-shadow: none; animation: none; }
+.onb-orb.has-orb::before, .onb-orb.has-orb > span:not(.orb-body) { display: none; }
+.onb-orb .orb-body { position: absolute; inset: -14px; width: auto; height: auto; animation: none; filter: drop-shadow(0 8px 14px var(--orb-shadow, rgba(60, 70, 150, .25))); }
+.uai-av canvas, .uai-fly canvas, .onb-orb canvas { display: block; width: 100%; height: 100%; }
+.uai-fly { position: fixed; z-index: 95; margin: 0; pointer-events: none; transform-origin: 0 0; }
+.uai-fly.no-gl canvas, .uai-av.no-gl canvas, .onb-orb.no-gl canvas { background: conic-gradient(from 0deg, #1ea7ff, #ff2d75, #b8ff1f, #b44dff, #ffa11a, #1ea7ff); clip-path: circle(37%); }
+.uai-id { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.uai-id b { font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
+.uai-id small { font-size: 12.5px; color: var(--fg2, rgba(60, 60, 67, .62)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.uai-ib {
+  flex: none; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--fill, rgba(120, 120, 128, .12)); color: var(--fg, #000); transition: transform .3s cubic-bezier(.32, 1.25, .45, 1), background .2s;
+}
+.uai-ib:hover { background: var(--fill2, rgba(120, 120, 128, .2)); transform: scale(1.08); }
+.uai-ib svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+.uai-log { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 16px 14px 8px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
+.uai-msg { max-width: 88%; padding: 10px 14px; border-radius: 20px; font-size: 15px; line-height: 1.42; letter-spacing: -.01em; overflow-wrap: anywhere; animation: uaiIn .35s cubic-bezier(.32, 1.25, .45, 1) both; }
+.uai-msg b { font-weight: 700; }
+.uai-msg code { font-size: .88em; padding: 1px 6px; border-radius: 6px; background: var(--fill2, rgba(120, 120, 128, .2)); }
+.uai-bot { align-self: flex-start; border-bottom-left-radius: 7px; background: var(--fill, rgba(120, 120, 128, .12)); }
+.uai-me { align-self: flex-end; border-bottom-right-radius: 7px; color: #fff; background: linear-gradient(160deg, color-mix(in srgb, var(--uai-accent) 75%, #fff), var(--uai-accent)); box-shadow: 0 6px 16px color-mix(in srgb, var(--uai-accent) 32%, transparent); }
+.uai-typing { display: flex; gap: 5px; padding: 14px 16px; }
+.uai-typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--fg2, rgba(60, 60, 67, .6)); animation: uaiDot 1s ease-in-out infinite; }
+.uai-typing i:nth-child(2) { animation-delay: .15s; }
+.uai-typing i:nth-child(3) { animation-delay: .3s; }
+
+.uai-extra { margin-top: 10px; }
+.uai-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.uai-go {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0; border-radius: 99px; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 650; color: #fff; background: var(--uai-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 6px 14px color-mix(in srgb, var(--uai-accent) 36%, transparent);
+  transition: transform .3s cubic-bezier(.32, 1.25, .45, 1);
+}
+.uai-go:hover { transform: translateY(-1px) scale(1.03); }
+
+.uai-chips { display: flex; gap: 8px; padding: 6px 14px 10px; overflow-x: auto; scrollbar-width: none; min-height: 0; }
+.uai-chips::-webkit-scrollbar { display: none; }
+.uai-chips:empty { display: none; }
+.uai-chip {
+  flex: none; padding: 8px 14px; border: 0; border-radius: 99px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap;
+  color: color-mix(in srgb, var(--uai-accent) 85%, var(--fg, #000)); background: color-mix(in srgb, var(--uai-accent) 14%, transparent);
+  transition: transform .3s cubic-bezier(.32, 1.25, .45, 1), background .2s; animation: uaiIn .4s cubic-bezier(.32, 1.25, .45, 1) both;
+}
+.uai-chip:hover { background: color-mix(in srgb, var(--uai-accent) 24%, transparent); transform: translateY(-1px); }
+
+.uai-form { display: flex; gap: 8px; padding: 6px 12px calc(12px + env(safe-area-inset-bottom, 0px) * 0); align-items: center; }
+.uai-input {
+  flex: 1; min-width: 0; height: 44px; padding: 0 16px; border: 0; border-radius: 99px; outline: none;
+  font: inherit; font-size: 16px; color: var(--fg, #000); background: var(--fill, rgba(120, 120, 128, .12));
+  transition: box-shadow .25s;
+}
+.uai-input::placeholder { color: var(--fg2, rgba(60, 60, 67, .55)); }
+.uai-input:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--uai-accent) 40%, transparent); }
+.uai-mic {
+  flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer;
+  color: var(--fg, #000); background: var(--fill, rgba(120, 120, 128, .12));
+  transition: transform .3s cubic-bezier(.32, 1.25, .45, 1), background .2s, color .2s;
+}
+.uai-mic:disabled { opacity: .35; cursor: default; }
+.uai-mic:hover:not(:disabled) { transform: scale(1.08); background: var(--fill2, rgba(120, 120, 128, .2)); }
+.uai-mic svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+.uai-mic.on, .uai-mic.on:hover:not(:disabled) { color: #fff; background: #ff3b30; animation: uaiPulse 1.4s ease-out infinite; }
+.uai-listening .uai-input { box-shadow: 0 0 0 3px rgba(255, 59, 48, .35); }
+@keyframes uaiPulse { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, .5); } 100% { box-shadow: 0 0 0 14px rgba(255, 59, 48, 0); } }
+.uai-send {
+  flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer; color: #fff;
+  background: var(--uai-accent); box-shadow: 0 6px 16px color-mix(in srgb, var(--uai-accent) 40%, transparent);
+  transition: transform .3s cubic-bezier(.32, 1.25, .45, 1), opacity .2s;
+}
+.uai-send:hover:not(:disabled) { transform: scale(1.08); }
+.uai-send:disabled { opacity: .35; cursor: default; box-shadow: none; }
+.uai-send svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.uai :focus-visible { outline: 3px solid color-mix(in srgb, var(--uai-accent) 70%, transparent); outline-offset: 2px; }
+
+/* the orb glows a little while the chat is open */
+.uzio-orb.uai-active { pointer-events: none; }
+.uzio-orb.uai-active .orb-label { opacity: 0 !important; }
+
+@keyframes uaiIn { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes uaiDot { 0%, 80%, 100% { transform: translateY(0); opacity: .4; } 40% { transform: translateY(-5px); opacity: 1; } }
+
+/* landing page: the orb isn't fixed there, so the panel docks bottom-right */
+@media (max-width: 640px) {
+  .uai { right: var(--uai-r, 10px); width: calc(100vw - 20px - (var(--uai-r, 10px) - 10px)); border-radius: 26px; }
+  .uai--hub { height: min(640px, calc(100dvh - var(--uai-b, 18px) - 84px)); }
+  .uai:not(.uai--hub) { height: min(640px, calc(100dvh - 24px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .uai, .uai-msg, .uai-chip { transition: opacity .15s linear; animation: none; transform: none; }
+  .uai-typing i, .uai-mic.on { animation: none; }
 }
 
-:root:not([data-cursor="system"]),
-:root:not([data-cursor="system"]) body { cursor: var(--uz-arrow); }
+/* ======================================================================
+   Uzio's Room (Uzio AI tab): one fixed screen. A big floating orb, one slim glass chat bar under it.
+   No frame, no floor, no title. The layout switch lives in style.css (body.is-room).
+   ====================================================================== */
+.uzio-orb.away { display: none !important; } /* the corner chatbot is removed while the room is open */
 
-/* the hand: anything you can click */
-:root:not([data-cursor="system"]) :is(
-  a[href], button, [role="button"], [role="tab"], [role="option"], summary, label[for], select,
-  input[type="checkbox"], input[type="radio"], input[type="range"], input[type="submit"], input[type="button"],
-  [data-act], [data-view], [data-go], [data-id], [data-onb], [data-level], [data-int], [data-lang], .perk-item, .switch, .uzio-orb,
-  button *, a[href] *, [role="button"] *, .uzio-orb *
-) { cursor: var(--uz-hand) !important; }
+.room { --room-accent: var(--accent, #ffa11a); flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: uaiIn .5s cubic-bezier(.32, 1.25, .45, 1) both; }
 
-/* the text beam: anywhere you can type */
-:root:not([data-cursor="system"]) :is(
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="color"]):not([type="file"]),
-  textarea, [contenteditable="true"]
-) { cursor: var(--uz-text) !important; }
-
-/* things you can't click right now keep the plain arrow */
-:root:not([data-cursor="system"]) :is(button:disabled, button:disabled *, input:disabled, select:disabled, [aria-disabled="true"], [aria-disabled="true"] *) { cursor: var(--uz-arrow) !important; }
-
-/* the loading ring, for anything marked busy */
-:root:not([data-cursor="system"]) :is([aria-busy="true"], [aria-busy="true"] *) { cursor: var(--uz-wait) !important; }
-
-/* while the page or Uzio is busy, a spinning ring trails the cursor (positioned by uzio-cursor.js) */
-.uz-loader {
-  position: fixed; left: 0; top: 0; z-index: 2147483000; width: 22px; height: 22px; margin: 0;
-  pointer-events: none; opacity: 0; transition: opacity .25s ease; will-change: transform;
-  filter: drop-shadow(0 0 3px rgba(0, 229, 204, .6)) drop-shadow(0 1px 2px rgba(6, 64, 74, .35));
+/* the stage is just the free space above the chat: the orb scales to it */
+.room-stage { position: relative; flex: 1; min-height: 0; width: 100%; container-type: size; }
+.room-glow {
+  position: absolute; left: 50%; top: 50%; width: min(96cqh, 100cqw); aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 0; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--room-accent) 34%, transparent), transparent 68%);
+  animation: roomBreath 4.2s ease-in-out infinite;
 }
-.uz-loader.on { opacity: 1; }
-.uz-loader::before { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 4px solid rgba(255, 255, 255, .88); box-sizing: border-box; }
-.uz-loader i {
-  position: absolute; inset: 0; display: block; border-radius: 50%;
-  background: conic-gradient(from 0deg, rgba(25, 240, 216, 0) 0%, #7dfff0 30%, #19f0d8 62%, #00b9d4 100%);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4.5px), #000 calc(100% - 4px));
-          mask: radial-gradient(farthest-side, transparent calc(100% - 4.5px), #000 calc(100% - 4px));
-  animation: uzSpin .75s linear infinite;
+/* the canvas has transparent margins around the glass sphere, so the box is a bit bigger than the stage */
+.room-orb { position: absolute; left: 50%; top: 50%; width: min(60dvh, 100%); width: min(122cqh, 100cqw, 760px); aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 2; cursor: pointer; }
+.room-orb .orb-body { position: absolute; inset: 0; width: 100%; height: 100%; animation: orbfloat 4.2s ease-in-out infinite; filter: drop-shadow(0 18px 22px var(--orb-shadow, rgba(60, 70, 150, .3))); }
+.room-orb canvas { display: block; width: 100%; height: 100%; }
+.room-orb.no-gl canvas { background: conic-gradient(from 0deg, #1ea7ff, #ff2d75, #b8ff1f, #b44dff, #ffa11a, #1ea7ff); clip-path: circle(37%); }
+/* Uzio reacts: a red ring while listening, a quicker pulse while thinking */
+.room.listening .room-glow { animation: roomListen 1.3s ease-out infinite; background: radial-gradient(circle, rgba(255, 59, 48, .32), transparent 68%); }
+.room.thinking .room-glow { animation: roomBreath 1.2s ease-in-out infinite; }
+
+.room-chat { flex: none; width: min(620px, 100%); min-width: 0; position: relative; z-index: 5; }
+
+/* the chat dock: [history button] [ input · mic · send ] with the quick replies above. The history pops up over the orb. */
+.uai-hist { display: none; }
+.uai-field { display: contents; }
+.uai.uai--room {
+  position: relative; right: auto; bottom: auto; left: auto; width: 100%; height: auto; overflow: visible; border-radius: 0;
+  background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+  opacity: 1; visibility: visible; transform: none; transition: none; z-index: 1;
 }
-@keyframes uzSpin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .uz-loader i { animation: none; } }
+.uai--room .uai-head { display: none; }
+
+/* history pop-up: same glass as the top bar, opens above the input */
+.uai--room .uai-log {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); flex: none; max-height: min(42dvh, 340px); padding: 12px; gap: 6px; border-radius: 26px;
+  background: color-mix(in srgb, var(--card, #fff) 66%, transparent); -webkit-backdrop-filter: blur(30px) saturate(1.9); backdrop-filter: blur(30px) saturate(1.9);
+  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .75)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12));
+  scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--fg, #000) 22%, transparent) transparent;
+  opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(10px) scale(.97); transform-origin: 50% 100%;
+  transition: opacity .2s ease, transform .4s cubic-bezier(.32, 1.25, .45, 1), visibility 0s linear .4s;
+}
+.uai--room.hist-open .uai-log { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition-delay: 0s; }
+.uai--room .uai-msg { max-width: 92%; padding: 7px 12px; border-radius: 16px; font-size: 14px; line-height: 1.38; }
+.uai--room .uai-bot { border-bottom-left-radius: 5px; }
+.uai--room .uai-me { border-bottom-right-radius: 5px; }
+.uai--room .uai-extra { margin-top: 8px; }
+.uai--room .uai-go { padding: 6px 12px; font-size: 13px; }
+
+.uai--room .uai-chips { justify-content: safe center; padding: 0 2px 10px; gap: 6px; }
+.uai--room .uai-chip { padding: 6px 12px; font-size: 13px; }
+
+.uai--room .uai-form { padding: 0; gap: 10px; align-items: center; }
+/* history button + input bar + mic + send: all the same liquid glass as the search button */
+.uai--room .uai-hist, .uai--room .uai-field { background: var(--glass, rgba(255, 255, 255, .58)); -webkit-backdrop-filter: blur(30px) saturate(1.9); backdrop-filter: blur(30px) saturate(1.9);
+  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .75)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)), inset 0 -1px 0 rgba(255, 255, 255, .08), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12)); }
+.uai--room .uai-hist {
+  flex: none; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; display: grid; place-items: center; color: var(--fg, #000);
+  transition: transform .4s cubic-bezier(.32, 1.25, .45, 1), color .2s;
+}
+.uai--room .uai-hist:hover { transform: scale(1.07); }
+.uai--room .uai-hist:active { transform: scale(.92); }
+.uai--room .uai-hist[aria-expanded="true"] { color: var(--uai-accent); }
+.uai-hist svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.uai--room .uai-field {
+  flex: 1; min-width: 0; height: 48px; display: flex; align-items: center; gap: 4px; padding: 0 5px 0 6px; border-radius: 999px;
+  transition: transform .35s cubic-bezier(.32, 1.25, .45, 1), box-shadow .3s ease;
+}
+.uai--room .uai-field:focus-within {
+  transform: scale(1.015);
+  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .75)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12)), 0 8px 28px color-mix(in srgb, var(--uai-accent) 22%, transparent);
+}
+.uai--room .uai-input { flex: 1; height: 100%; padding: 0 12px; background: transparent; border-radius: 0; font-size: 15px; font-weight: 600; box-shadow: none; }
+.uai--room .uai-input:focus { box-shadow: none; }
+.uai--room.uai-listening .uai-field { box-shadow: inset 0 0 0 1.5px rgba(255, 59, 48, .5), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12)); }
+.uai--room .uai-mic, .uai--room .uai-send {
+  width: 38px; height: 38px; background: color-mix(in srgb, var(--fg, #000) 7%, transparent); color: var(--fg, #000);
+  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .6)), inset 0 1px 0 var(--spec, rgba(255, 255, 255, .7));
+}
+.uai--room .uai-send { color: var(--uai-accent); background: color-mix(in srgb, var(--uai-accent) 16%, transparent); }
+.uai--room .uai-send:disabled { color: var(--fg2, rgba(60, 60, 67, .5)); background: color-mix(in srgb, var(--fg, #000) 7%, transparent); opacity: .6; }
+.uai--room .uai-mic.on, .uai--room .uai-mic.on:hover:not(:disabled) { color: #fff; background: #ff3b30; box-shadow: none; }
+.uai--room .uai-mic svg { width: 19px; height: 19px; }
+.uai--room .uai-send svg { width: 18px; height: 18px; }
+
+@keyframes roomBreath { 0%, 100% { opacity: .75; transform: translate(-50%, -50%) scale(.96); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } }
+@keyframes roomListen { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.9); } 100% { opacity: .5; transform: translate(-50%, -50%) scale(1.25); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .room, .room-glow, .room-orb .orb-body { animation: none; }
+}
+.uai--room .uai-input:focus-visible { outline: none; }
+
+/* ======================================================================
+   Room layout: glass chat on the left, Uzio as a companion on the right.
+   The "body" prefix and !important keep other stylesheets from undoing it.
+   ====================================================================== */
+body .room {
+  --orb-max: 560px; /* Uzio's size: lower = smaller */
+  display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
+  gap: 24px; width: 100%; max-width: 1280px; margin-inline: auto; padding: 8px 20px 4px; box-sizing: border-box;
+}
+body .room .room-chat { grid-area: 1 / 1; width: 100%; height: 100%; min-height: 0; }
+body .room .room-stage { grid-area: 1 / 2; width: 100%; height: 100%; min-height: 0; }
+body .room .room-stage .room-orb { left: 50% !important; width: min(100cqw, 100cqh, var(--orb-max)) !important; height: auto !important; aspect-ratio: 1; }
+body .room .room-stage .room-glow { left: 50%; width: min(100cqw, 100cqh, var(--orb-max)); }
+
+/* the glass sheet */
+body .room .uai.uai--room {
+  display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; box-sizing: border-box; overflow: hidden; border-radius: 32px;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--card, #fff) 62%, transparent), color-mix(in srgb, var(--card, #fff) 34%, transparent));
+  -webkit-backdrop-filter: blur(40px) saturate(1.8); backdrop-filter: blur(40px) saturate(1.8);
+  box-shadow: inset 0 0 0 1px var(--glass-edge, rgba(255, 255, 255, .22)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .35)), 0 24px 60px rgba(0, 0, 0, .22);
+}
+
+/* history is always visible inside the sheet */
+body .room .uai--room .uai-log {
+  position: static; flex: 1; min-height: 0; max-height: none; padding: 20px 18px 12px; gap: 10px;
+  background: none; box-shadow: none; border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none;
+  opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition: none;
+}
+body .room .uai--room .uai-msg { flex-shrink: 0; max-width: 85%; padding: 10px 14px; border-radius: 20px; font-size: 15px; line-height: 1.45; }
+body .room .uai--room .uai-bot { border-bottom-left-radius: 7px; background: color-mix(in srgb, var(--fg, #000) 8%, transparent); box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .25)); }
+body .room .uai--room .uai-me { border-bottom-right-radius: 7px; }
+
+/* no starter cards, and no history button since the chat is already open */
+body .room .uai--room .uai-chips, body .room .uai--room .uai-hist { display: none; }
+body .room .uai--room .uai-form { padding: 10px 14px 14px; }
+
+/* phones and narrow windows: Uzio on top, chat below */
+@media (max-width: 899px) {
+  body .room { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 28%) minmax(0, 1fr); gap: 8px; padding: 0 10px 4px; }
+  body .room .room-stage { grid-area: 1 / 1; }
+  body .room .room-chat { grid-area: 2 / 1; }
+}
+
+/* ---------- fill the whole screen ---------- */
+/* widen every wrapper around the room (they were squeezing it into a narrow column) */
+body :has(.room) { max-width: none !important; width: 100% !important; margin-inline: 0 !important; padding-inline: 0 !important; box-sizing: border-box; }
+body .room {
+  /* and span the full window even if a wrapper still holds it back */
+  position: relative; left: 50%; align-self: flex-start; flex-shrink: 0;
+  width: 100vw !important; max-width: none !important; margin: 0 0 0 -50vw !important;
+  grid-template-columns: minmax(0, 1.52fr) minmax(0, 1fr); gap: 24px; padding: 8px 24px 4px;
+}
+body .room .room-stage .room-orb,
+body .room .room-stage .room-glow { width: min(96cqw, 100cqh) !important; }
+body .room .uai--room .uai-msg { max-width: min(75%, 640px); font-size: 16px; }
+@media (max-width: 899px) {
+  body .room { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 0 10px 4px; }
+}
+
+/* ======================================================================
+   Uzio's extra moves. They use translate / rotate / scale, so they stack on top of the float.
+   ====================================================================== */
+body .room .room-orb .orb-body {
+  transform-origin: 50% 80%;
+  transition: translate .6s cubic-bezier(.32, 1.4, .45, 1), rotate .6s cubic-bezier(.32, 1.4, .45, 1);
+}
+
+/* peek: leans toward the chat while you type */
+body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: -9deg; translate: -6% 2%; }
+
+/* hop: squash and bounce when a message is sent (.thinking is added at that moment) */
+body .room.thinking .room-orb .orb-body { animation: orbfloat 4.2s ease-in-out infinite, uzioHop .7s cubic-bezier(.3, .7, .4, 1); }
+@keyframes uzioHop {
+  0%, 100% { scale: 1 1; translate: 0 0; }
+  18% { scale: 1.1 .88; translate: 0 3%; }
+  45% { scale: .93 1.08; translate: 0 -9%; }
+  70% { scale: 1.06 .94; translate: 0 1%; }
+  85% { scale: .98 1.02; translate: 0 -1%; }
+}
+
+/* thinking orbit: three little lights circle Uzio until the reply is done */
+body .room .room-orb::after {
+  content: ''; position: absolute; inset: 0; z-index: 3; border-radius: 50%; pointer-events: none;
+  background:
+    radial-gradient(circle 1.5cqmin at 50% 6%, #fff 0 35%, #ffd36b 60%, transparent 100%),
+    radial-gradient(circle 1.5cqmin at 88.1% 72%, #fff 0 35%, #ff7ab5 60%, transparent 100%),
+    radial-gradient(circle 1.5cqmin at 11.9% 72%, #fff 0 35%, #6bc8ff 60%, transparent 100%);
+  opacity: 0; scale: .8; transition: opacity .25s ease, scale .4s ease;
+}
+body .room.thinking .room-orb::after { opacity: 1; scale: 1; animation: uzioOrbit 1.6s linear infinite; }
+@keyframes uzioOrbit { to { rotate: 360deg; } }
+
+/* when Uzio sits above the chat, it peeks downward instead */
+@media (max-width: 899px) {
+  body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: -4deg; translate: 0 5%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body .room .room-orb .orb-body, body .room.thinking .room-orb .orb-body, body .room.thinking .room-orb::after { animation: none; transition: none; }
+  body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: none; translate: none; }
+}
+
+/* ---------- time-of-day moods (data-time is set by the script) ---------- */
+body .room[data-time="morning"] { --room-accent: #ffd24a; }
+body .room[data-time="evening"] { --room-accent: #ff6f61; }
+body .room[data-time="night"] { --room-accent: #6f7cff; }
+body .room .room-orb { transition: filter 1s ease; }
+body .room[data-time="morning"] .room-orb { filter: brightness(1.08) saturate(1.1); }
+body .room[data-time="night"] .room-orb { filter: brightness(.82) saturate(.85); }
+/* night: slow, sleepy breathing. morning: a livelier float */
+body .room[data-time="night"]:not(.thinking) .room-orb .orb-body { animation-duration: 7s; }
+body .room[data-time="night"]:not(.thinking):not(.listening) .room-glow { animation-duration: 7s; }
+body .room[data-time="morning"]:not(.thinking) .room-orb .orb-body { animation-duration: 3.2s; }
