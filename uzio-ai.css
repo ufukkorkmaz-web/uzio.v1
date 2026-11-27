@@ -281,13 +281,11 @@ body .room .uai--room .uai-msg { max-width: min(75%, 640px); font-size: 16px; }
 /* ======================================================================
    Uzio's extra moves. They use translate / rotate / scale, so they stack on top of the float.
    ====================================================================== */
-body .room .room-orb .orb-body {
-  transform-origin: 50% 80%;
-  transition: translate .6s cubic-bezier(.32, 1.4, .45, 1), rotate .6s cubic-bezier(.32, 1.4, .45, 1);
-}
+body .room .room-orb .orb-body { transform-origin: 50% 80%; }
+body .room .room-orb .orb-body > * { transition: translate .6s cubic-bezier(.32, 1.4, .45, 1), rotate .6s cubic-bezier(.32, 1.4, .45, 1); }
 
 /* peek: leans toward the chat while you type */
-body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: -9deg; translate: -6% 2%; }
+body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body > * { rotate: -9deg; translate: -6% 2%; }
 
 /* hop: squash and bounce when a message is sent (.thinking is added at that moment) */
 body .room.thinking .room-orb .orb-body { animation: orbfloat 4.2s ease-in-out infinite, uzioHop .7s cubic-bezier(.3, .7, .4, 1); }
@@ -313,11 +311,11 @@ body .room.thinking .room-orb::after { opacity: 1; scale: 1; animation: uzioOrbi
 
 /* when Uzio sits above the chat, it peeks downward instead */
 @media (max-width: 899px) {
-  body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: -4deg; translate: 0 5%; }
+  body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body > * { rotate: -4deg; translate: 0 5%; }
 }
 @media (prefers-reduced-motion: reduce) {
   body .room .room-orb .orb-body, body .room.thinking .room-orb .orb-body, body .room.thinking .room-orb::after { animation: none; transition: none; }
-  body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: none; translate: none; }
+  body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body > * { rotate: none; translate: none; }
 }
 
 /* ---------- time-of-day moods (data-time is set by the script) ---------- */
