@@ -615,3 +615,15 @@ h1 { margin: 0; font-size: clamp(36px, 6.4vw, 60px); line-height: 1.03; font-wei
 :root[data-theme="dark"] .logo-light{display:none}
 :root[data-theme="dark"] .logo-dark{display:block}
 @media(max-width:480px){.brand-logo.logo-light,.brand-logo.logo-dark,:root:not([data-theme="light"]) .brand-logo.logo-dark,:root[data-theme="dark"] .brand-logo.logo-dark{display:none}}
+
+/* ---------- Uzio AI room: one fixed screen (the page does not scroll, no title) ---------- */
+html:has(body.is-room) { overflow: hidden; }
+body.is-room { height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+body.is-room .bar { flex: none; }
+body.is-room main { flex: 1; min-height: 0; width: min(760px, 100%); display: flex; flex-direction: column; padding-top: 0; padding-bottom: 16px; }
+body.is-room .large { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } /* title stays for screen readers only */
+body.is-room .panel { flex: 1; min-height: 0 !important; display: flex; flex-direction: column; }
+body.is-room .back-top { display: none; }
+@media (max-width: 760px) {
+  body.is-room main { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+}
