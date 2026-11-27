@@ -457,28 +457,28 @@
 
   var UI = {
     en: { title: 'Uzio AI', sub: 'Knows everything about Uzio', ph: 'Ask me anything about Uzio…', send: 'Send', close: 'Close', reset: 'New chat', open: 'Open Uzio AI',
-          thinking: 'Uzio is typing', mic: 'Voice input', micStop: 'Stop listening', listening: 'Listening…',
+          thinking: 'Uzio is typing', mic: 'Voice input', micStop: 'Stop listening', listening: 'Listening…', speak: 'Speak to Uzio', speakStop: 'Listening… tap to stop', speakNo: 'Voice isn’t supported in this browser',
           micBlocked: 'I can’t use the microphone. Allow microphone access for this site in your browser settings, then tap 🎤 again.', micNone: 'I didn’t catch that. Tap 🎤 and try again.', micNoDevice: 'I can’t find a microphone on this device.', micNet: 'Voice input needs an internet connection (your browser’s speech service). You can still type to me.', micErr: 'Voice input hit a snag. You can still type to me.',
           fallback: 'I only know Uzio, and I couldn’t find that on the site. Here are things I can help with:',
           greetNamed: 'Hey {n}! 👋 I’m Uzio. I know every corner of this site, and I can invent challenges for you. What are you curious about?',
           greet: 'Hey! 👋 I’m Uzio. I know every corner of this site, and I can invent challenges for you. What are you curious about?',
           more: 'Here’s where we can go next:', related: 'You might also like:' },
     tr: { title: 'Uzio AI', sub: 'Uzio hakkında her şeyi bilir', ph: 'Uzio hakkında her şeyi sor…', send: 'Gönder', close: 'Kapat', reset: 'Yeni sohbet', open: 'Uzio AI’ı aç',
-          thinking: 'Uzio yazıyor', mic: 'Sesli giriş', micStop: 'Dinlemeyi durdur', listening: 'Dinliyorum…',
+          thinking: 'Uzio yazıyor', mic: 'Sesli giriş', micStop: 'Dinlemeyi durdur', listening: 'Dinliyorum…', speak: 'Uzio ile konuş', speakStop: 'Dinliyorum… durdurmak için dokun', speakNo: 'Bu tarayıcı sesi desteklemiyor',
           micBlocked: 'Mikrofonu kullanamıyorum. Tarayıcı ayarlarından bu site için mikrofon iznini aç, sonra 🎤’a tekrar dokun.', micNone: 'Seni duyamadım. 🎤’a dokunup tekrar dene.', micNoDevice: 'Bu cihazda mikrofon bulamıyorum.', micNet: 'Sesli giriş internet bağlantısı gerektirir (tarayıcının konuşma servisi). Yine de yazabilirsin.', micErr: 'Sesli girişte bir sorun çıktı. Yine de yazabilirsin.',
           fallback: 'Ben sadece Uzio’yu biliyorum ve bunu sitede bulamadım. Şunlarda yardımcı olabilirim:',
           greetNamed: 'Selam {n}! 👋 Ben Uzio. Bu sitenin her köşesini biliyorum ve senin için meydan okumalar icat edebilirim. Neyi merak ediyorsun?',
           greet: 'Selam! 👋 Ben Uzio. Bu sitenin her köşesini biliyorum ve senin için meydan okumalar icat edebilirim. Neyi merak ediyorsun?',
           more: 'Şuradan devam edebiliriz:', related: 'Bunlar da ilgini çekebilir:' },
     fr: { title: 'Uzio AI', sub: 'Sait tout sur Uzio', ph: 'Demande-moi tout sur Uzio…', send: 'Envoyer', close: 'Fermer', reset: 'Nouveau chat', open: 'Ouvrir Uzio AI',
-          thinking: 'Uzio écrit', mic: 'Saisie vocale', micStop: 'Arrêter l’écoute', listening: 'J’écoute…',
+          thinking: 'Uzio écrit', mic: 'Saisie vocale', micStop: 'Arrêter l’écoute', listening: 'J’écoute…', speak: 'Parler à Uzio', speakStop: 'J’écoute… touche pour arrêter', speakNo: 'La voix n’est pas prise en charge par ce navigateur',
           micBlocked: 'Je ne peux pas utiliser le micro. Autorise l’accès au micro pour ce site dans les réglages du navigateur, puis touche 🎤 à nouveau.', micNone: 'Je n’ai pas compris. Touche 🎤 et réessaie.', micNoDevice: 'Je ne trouve pas de micro sur cet appareil.', micNet: 'La saisie vocale nécessite une connexion internet (le service vocal de ton navigateur). Tu peux toujours écrire.', micErr: 'La saisie vocale a rencontré un souci. Tu peux toujours écrire.',
           fallback: 'Je ne connais qu’Uzio et je n’ai pas trouvé ça sur le site. Voici ce dont je peux parler :',
           greetNamed: 'Salut {n} ! 👋 Je suis Uzio. Je connais chaque recoin de ce site et je peux inventer des défis pour toi. Qu’est-ce qui te fait envie ?',
           greet: 'Salut ! 👋 Je suis Uzio. Je connais chaque recoin de ce site et je peux inventer des défis pour toi. Qu’est-ce qui te fait envie ?',
           more: 'Voici où on peut aller ensuite :', related: 'Ça pourrait aussi t’intéresser :' },
     de: { title: 'Uzio AI', sub: 'Weiß alles über Uzio', ph: 'Frag mich alles über Uzio…', send: 'Senden', close: 'Schließen', reset: 'Neuer Chat', open: 'Uzio AI öffnen',
-          thinking: 'Uzio tippt', mic: 'Spracheingabe', micStop: 'Zuhören beenden', listening: 'Ich höre zu…',
+          thinking: 'Uzio tippt', mic: 'Spracheingabe', micStop: 'Zuhören beenden', listening: 'Ich höre zu…', speak: 'Mit Uzio sprechen', speakStop: 'Ich höre zu… tippen zum Beenden', speakNo: 'Sprache wird von diesem Browser nicht unterstützt',
           micBlocked: 'Ich kann das Mikrofon nicht nutzen. Erlaube den Mikrofonzugriff für diese Seite in den Browsereinstellungen und tippe dann erneut auf 🎤.', micNone: 'Das habe ich nicht verstanden. Tippe auf 🎤 und versuche es nochmal.', micNoDevice: 'Ich finde auf diesem Gerät kein Mikrofon.', micNet: 'Spracheingabe braucht eine Internetverbindung (der Sprachdienst deines Browsers). Du kannst mir trotzdem schreiben.', micErr: 'Bei der Spracheingabe ist etwas schiefgelaufen. Du kannst mir trotzdem schreiben.',
           fallback: 'Ich kenne nur Uzio und habe das auf der Seite nicht gefunden. Dabei kann ich helfen:',
           greetNamed: 'Hey {n}! 👋 Ich bin Uzio. Ich kenne jede Ecke dieser Seite und kann Challenges für dich erfinden. Was interessiert dich?',
@@ -659,10 +659,14 @@
   var reduce = win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var isHub = !!doc.getElementById('panel');
   var panel, logEl, form, input, sendBtn, chipsEl, titleEl, subEl, closeBtn, resetBtn;
-  var state = { last: null, busy: false, open: false, started: false };
+  var state = { last: null, busy: false, open: false, started: false, room: false };
   var SR = win.SpeechRecognition || win.webkitSpeechRecognition;
   var SR_LANG = { en: 'en-US', tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
   var micBtn = null, rec = null, recAborted = false;
+  function speakEl() { return doc.querySelector('.room-speak'); }
+  function roomEl() { return doc.querySelector('.room'); }
+  function micDis(v) { if (micBtn) micBtn.disabled = v; var sp = speakEl(); if (sp && SR) sp.disabled = v; }
+  function roomMood(cls, on) { var r = roomEl(); if (r) r.classList.toggle(cls, !!on); }
   function cur(on) { if (win.UzioCursor) win.UzioCursor.busy('chat', on); } /* spinning ring by the cursor while Uzio is thinking */
   var returnFocus = null;
 
@@ -738,6 +742,8 @@
     panel.setAttribute('aria-label', ui.title);
     if (micBtn) { var lbl = rec ? ui.micStop : ui.mic; micBtn.setAttribute('aria-label', lbl); micBtn.title = lbl; if (rec) input.placeholder = ui.listening; }
     Array.prototype.forEach.call(doc.querySelectorAll('.uzio-orb'), function (o) { o.setAttribute('aria-label', ui.open); });
+    var sp = speakEl();
+    if (sp) { var st = sp.querySelector('.room-speak-t'); if (st) st.textContent = rec ? ui.speakStop : ui.speak; sp.setAttribute('aria-label', rec ? ui.speakStop : ui.speak); sp.title = SR ? '' : ui.speakNo; sp.classList.toggle('no-sr', !SR); }
   }
 
   function scrollDown() { logEl.scrollTop = logEl.scrollHeight; }
@@ -773,7 +779,7 @@
 
   function say(res, lang, instant) {
     var node = addBot(), words = res.text.split(/(\s+)/), i = 0;
-    state.busy = true; sendBtn.disabled = true; if (micBtn) micBtn.disabled = true;
+    state.busy = true; sendBtn.disabled = true; micDis(true);
     function finish() {
       node.innerHTML = fmt(res.text);
       var extra = '';
@@ -782,7 +788,7 @@
       if (extra) { var a = doc.createElement('div'); a.className = 'uai-extra'; a.innerHTML = extra; node.appendChild(a); }
       chipsEl.innerHTML = chipHtml(res.rel, lang);
       chipsEl.scrollLeft = 0;
-      state.busy = false; cur(false); sendBtn.disabled = !input.value.trim(); if (micBtn) micBtn.disabled = false; scrollDown();
+      state.busy = false; cur(false); roomMood('thinking', false); sendBtn.disabled = !input.value.trim(); micDis(false); scrollDown();
       if (res.nav) setTimeout(function () { go(res.nav); }, reduce ? 0 : 450);
     }
     if (instant || reduce) { finish(); return; }
@@ -802,7 +808,7 @@
     addUser(text); chipsEl.innerHTML = '';
     var res = reply(text, { lang: lang, profile: profile(), state: state, id: id, view: isHub ? (win.location.hash.slice(1) || 'home') : null });
     state.last = res.id || state.last;
-    state.busy = true; sendBtn.disabled = true; if (micBtn) micBtn.disabled = true; cur(true);
+    state.busy = true; sendBtn.disabled = true; micDis(true); cur(true); roomMood('thinking', true);
     var t = typing();
     setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); say(res, lang); }, reduce ? 0 : 380 + Math.min(500, res.text.length * 1.2));
   }
@@ -814,11 +820,14 @@
   }
   function note(text) { var d = addBot(); d.innerHTML = fmt(text); scrollDown(); }
   function micUI(on) {
-    if (!micBtn) return;
     var ui = UI[curLang()];
+    if (!micBtn) { roomMood('listening', on); var sp0 = speakEl(); if (sp0) { sp0.classList.toggle('on', on); } return; }
     micBtn.classList.toggle('on', on); micBtn.setAttribute('aria-pressed', String(on));
     micBtn.setAttribute('aria-label', on ? ui.micStop : ui.mic); micBtn.title = on ? ui.micStop : ui.mic;
     panel.classList.toggle('uai-listening', on);
+    roomMood('listening', on);
+    var sp = speakEl();
+    if (sp) { sp.classList.toggle('on', on); sp.setAttribute('aria-pressed', String(on)); var st = sp.querySelector('.room-speak-t'); if (st) st.textContent = on ? ui.speakStop : ui.speak; sp.setAttribute('aria-label', st ? st.textContent : ui.speak); }
     input.placeholder = on ? ui.listening : ui.ph;
   }
   function stopMic(abort) {
@@ -858,7 +867,7 @@
   }
 
   function reset() {
-    logEl.innerHTML = ''; state.last = null; state.busy = false; chipsEl.innerHTML = ''; if (micBtn) micBtn.disabled = false; cur(false);
+    logEl.innerHTML = ''; state.last = null; state.busy = false; chipsEl.innerHTML = ''; micDis(false); cur(false); roomMood('thinking', false);
     start(true);
   }
   function start(force) {
@@ -871,6 +880,7 @@
 
   /* ---------- the real Uzio orb moves between the page, the chat header and the welcome window ---------- */
   var fly = null; /* { wrap, anim, to } while the orb is travelling */
+  var orbBodyEl = doc.getElementById('orbBody'); /* kept by reference: the page re-renders and can detach it */
   function slotEl() { return panel && panel.querySelector('.uai-av'); }
   function slotRect() {
     /* where the header slot will sit once the panel has finished opening (layout values ignore the open transform) */
@@ -897,12 +907,13 @@
     while (p) { x += p.offsetLeft; y += p.offsetTop; p = p.offsetParent; } /* layout position: ignores the card's entrance transform */
     return { left: x - pad, top: y - pad, width: s.offsetWidth + pad * 2, height: s.offsetHeight + pad * 2 };
   }
-  function hostEl(n) { return n === 'chat' ? slotEl() : n === 'welcome' ? welcomeSlot() : doc.querySelector('.uzio-orb'); }
+  function roomRect(h) { var r = h.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; }
+  function hostEl(n) { return n === 'room' ? doc.getElementById('roomOrb') : n === 'chat' ? slotEl() : n === 'welcome' ? welcomeSlot() : doc.querySelector('.uzio-orb'); }
   function landOrb() {
     if (!fly) return;
     var f = fly; fly = null;
     if (f.anim) { try { f.anim.cancel(); } catch (e) {} }
-    var body = doc.getElementById('orbBody'), link = doc.querySelector('.uzio-orb'), host = hostEl(f.to);
+    var body = orbBodyEl, link = doc.querySelector('.uzio-orb'), host = hostEl(f.to);
     if (body && link && host) {
       host.appendChild(body);
       if (f.to === 'home') { link.style.width = ''; link.style.height = ''; }
@@ -912,22 +923,23 @@
     if (f.wrap.parentNode) f.wrap.parentNode.removeChild(f.wrap);
   }
   function moveOrbTo(name) {
-    var body = doc.getElementById('orbBody'), link = doc.querySelector('.uzio-orb');
+    var body = orbBodyEl, link = doc.querySelector('.uzio-orb');
     if (!body || !link) return;
     landOrb();
     var host = hostEl(name);
     if (orbAt === name || !host) return;
+    var instant = !body.isConnected; /* its old home was re-rendered away: just land it */
     var from = body.getBoundingClientRect(), lr = link.getBoundingClientRect(), prev = hostEl(orbAt);
     if (orbAt === 'home') { link.style.width = lr.width + 'px'; link.style.height = lr.height + 'px'; } /* keep the corner's box while the orb is away */
-    var to = name === 'home' ? lr : name === 'chat' ? slotRect() : welcomeRect();
-    if (prev && orbAt === 'chat') prev.classList.remove('has-orb');
+    var to = name === 'home' ? lr : name === 'chat' ? slotRect() : name === 'room' ? roomRect(host) : welcomeRect();
+    if (prev && (orbAt === 'chat' || orbAt === 'room')) prev.classList.remove('has-orb');
     if (name === 'welcome') host.classList.add('has-orb'); /* the old "U" badge never shows again: the orb is on its way */
     var wrap = doc.createElement('div');
     wrap.className = 'uai-fly' + (link.classList.contains('no-gl') ? ' no-gl' : '');
     wrap.style.cssText = 'left:' + to.left + 'px;top:' + to.top + 'px;width:' + to.width + 'px;height:' + to.height + 'px;z-index:' + (name === 'welcome' || orbAt === 'welcome' ? 160 : 95);
     wrap.appendChild(body); doc.body.appendChild(wrap);
     fly = { wrap: wrap, to: name, anim: null };
-    if (reduce || !wrap.animate) { landOrb(); return; }
+    if (reduce || instant || !wrap.animate) { landOrb(); return; }
     var dx = from.left - to.left, dy = from.top - to.top, k = from.width / to.width;
     fly.anim = wrap.animate(
       [{ transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + k + ')' }, { transform: 'translate(0,0) scale(1)' }],
@@ -936,12 +948,12 @@
   }
   function orbWanted() {
     var o = doc.getElementById('onb');
-    return o && o.classList.contains('show') ? 'welcome' : state.open ? 'chat' : 'home';
+    return o && o.classList.contains('show') ? 'welcome' : state.room ? 'room' : state.open ? 'chat' : 'home';
   }
   function syncOrb() {
     var want = orbWanted();
     moveOrbTo(want);
-    if (panel && state.open) panel.inert = want === 'welcome'; /* keep the chat out of the tab order behind the welcome window */
+    if (panel && (state.open || state.room)) panel.inert = want === 'welcome'; /* keep the chat out of the tab order behind the welcome window */
   }
   (function watchWelcome() {
     var o = doc.getElementById('onb');
@@ -951,6 +963,7 @@
 
   function setOpen(on, prompt) {
     if (!panel) build();
+    if (state.room) { if (on && prompt) ask(prompt); return; } /* in Uzio's Room the chat is always there */
     if (on === state.open) { if (on && prompt) ask(prompt); return; }
     state.open = on;
     panel.classList.toggle('open', on);
@@ -972,6 +985,68 @@
     }
   }
 
+
+  /* ---------- Uzio's Room (the Uzio AI tab) ----------
+     The orb floats in the middle, this same chat panel docks right below it, and there is a speak button.
+     The little corner orb and the floating chat are hidden while the room is open. */
+  var roomTimer = 0;
+  function cornerOrb(show) {
+    Array.prototype.forEach.call(doc.querySelectorAll('.uzio-orb'), function (o) { o.classList.toggle('away', !show); });
+  }
+  function dockPanel(host) {
+    if (!panel) build();
+    if (panel.parentNode !== host) host.appendChild(panel);
+    panel.classList.add('uai--room'); panel.classList.remove('uai--hub', 'open');
+    panel.inert = orbWanted() === 'welcome';
+  }
+  function releasePanel() {
+    clearTimeout(roomTimer);
+    if (state.room || !panel || !panel.classList.contains('uai--room')) return;
+    doc.body.appendChild(panel);
+    panel.classList.remove('uai--room'); if (isHub) panel.classList.add('uai--hub');
+    panel.inert = true;
+  }
+  function syncRoom() {
+    var host = doc.getElementById('roomChat'), want = !!host && win.location.hash === '#uzio-ai';
+    if (want) {
+      clearTimeout(roomTimer);
+      var wasRoom = state.room;
+      if (state.open) { /* the floating chat was open: fold it into the room */
+        state.open = false; panel.classList.remove('open');
+        Array.prototype.forEach.call(doc.querySelectorAll('.uzio-orb'), function (o) { o.classList.remove('uai-active'); o.setAttribute('aria-expanded', 'false'); });
+      }
+      state.room = true;
+      dockPanel(host); applyLang(); start();
+      var oh = doc.getElementById('roomOrb');
+      if (wasRoom && orbAt === 'room' && oh && orbBodyEl && orbBodyEl.parentNode !== oh) { oh.appendChild(orbBodyEl); oh.classList.add('has-orb'); } /* the page re-rendered (language change): re-home the orb */
+      else syncOrb(); /* flies the orb from the corner into the room... */
+      cornerOrb(false); /* ...and only then is the corner spot removed */
+    } else if (state.room) {
+      state.room = false; stopMic(true); roomMood('listening', false);
+      cornerOrb(true);
+      syncOrb(); /* the orb flies back to its corner */
+      roomTimer = setTimeout(releasePanel, 700);
+      if (!doc.getElementById('roomChat')) releasePanel();
+    }
+  }
+  var pEl = doc.getElementById('panel');
+  if (pEl) new MutationObserver(syncRoom).observe(pEl, { childList: true });
+  win.addEventListener('hashchange', syncRoom);
+
+  doc.addEventListener('click', function (e) {
+    var sp = e.target.closest && e.target.closest('[data-room="speak"]');
+    if (sp) {
+      if (!panel) build();
+      if (!SR) { note(VOICE_NO[curLang()]); return; }
+      if (rec) stopMic(); else startMic();
+      return;
+    }
+    if (e.target.closest && e.target.closest('.room-orb')) { /* poke Uzio: a happy burst */
+      var link = doc.querySelector('.uzio-orb');
+      if (link) link.dispatchEvent(new MouseEvent('click', { bubbles: false, cancelable: true }));
+    }
+  });
+
   /* the orb opens the chat instead of navigating (the href stays as a no-JS fallback) */
   doc.addEventListener('click', function (e) {
     var o = e.target.closest && e.target.closest('.uzio-orb');
@@ -984,6 +1059,7 @@
   Array.prototype.forEach.call(doc.querySelectorAll('.uzio-orb'), function (o) { o.setAttribute('aria-haspopup', 'dialog'); o.setAttribute('aria-expanded', 'false'); });
 
   api.open = function (prompt) { setOpen(true, prompt); };
+  syncRoom(); /* landing straight on #uzio-ai */
   api.close = function () { setOpen(false); };
   return api;
 });
