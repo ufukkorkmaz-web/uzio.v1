@@ -373,17 +373,12 @@
   }
 
   function rUzioAI() {
-    return '<div class="dash">' +
-      '<section class="card hero s12"><div><div class="kicker">Uzio AI · Game Master</div><div class="hero-title">Tell me how you want to play.</div><p class="sub">I can invent a challenge, remix a game, set a handicap, create a boss round or build a quest around your current streak.</p><div class="chips">' + chip('Adaptive difficulty', '#fff') + chip('Fresh rules', '#fff') + chip('Bonus objectives', '#fff') + '</div></div><button class="btn white" type="button" data-act="demo" data-v="Generate AI challenge" style="--c:var(--orange)">Generate challenge</button></section>' +
-      '<section class="card s7"><h2>Quick prompts <span class="hint">Tap to send to Uzio</span></h2><div class="suggest"><button type="button" data-act="open-uzio">“Give me a 2-minute challenge with a huge combo bonus.”</button><button type="button" data-act="open-uzio">“Turn my weakest game into a boss battle.”</button><button type="button" data-act="open-uzio">“Surprise me with a risky quest for 200 XP.”</button><button type="button" data-act="open-uzio">“Make a head-to-head challenge I can play with a friend.”</button></div></section>' +
-      '<section class="card s5"><div class="uzio-pick"><div class="uzio-mini"><span>U</span></div><div><div class="kicker">Live modifier</div><b>Difficulty: Spicy 🌶️</b><p class="sub">Uzio is ready to adjust timers, hints, multipliers and rewards while you play.</p></div></div><div class="chips">' + chip('+25% XP', 'var(--orange)') + chip('Fewer hints', 'var(--pink)') + chip('Faster timer', 'var(--purple)') + '</div></section>' +
-      '<div class="sec s12">Uzio can also… <small>Build the rules around you</small></div>' +
-      '<div class="s12 tiles">' +
-        tile('🧪', 'Remix', 'Combine two game modes into one new challenge.', 'AI', 'Experimental', 'var(--teal)', 'Uzio Remix') +
-        tile('👾', 'Create a Boss', 'Generate a multi-stage boss with escalating rules.', 'Boss', '+ XP', 'var(--orange)', 'Create Boss') +
-        tile('🗺️', 'Build a Quest', 'Turn several games into a connected adventure.', 'Quest', 'Rewards', 'var(--purple)', 'Build Quest') +
-        tile('⚖️', 'Balance It', 'Tune a challenge so it feels fair but exciting.', 'Adaptive', 'Smart', 'var(--green)', 'Balance It') +
-      '</div></div>';
+    /* Uzio's Room: the real orb (moved in by uzio-ai.js) floats in the middle, the chat docks below it, then the speak button */
+    return '<div class="room" id="room">' +
+      '<div class="room-stage"><div class="room-glow"></div><div class="room-orb" id="roomOrb"></div><div class="room-shadow"></div></div>' +
+      '<div class="room-chat" id="roomChat"></div>' +
+      '<button class="room-speak" type="button" data-room="speak" aria-pressed="false"><span class="room-speak-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></span><span class="room-speak-t">Speak</span></button>' +
+    '</div>';
   }
 
   var RENDER = { 'home': rHome, 'play': rPlay, 'watch': rWatch, 'perks': rPerks, 'uzio-ai': rUzioAI };
