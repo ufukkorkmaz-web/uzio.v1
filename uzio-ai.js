@@ -1094,7 +1094,10 @@
 
   /* ---------- random antics: every so often an idle Uzio entertains itself ---------- */
   var antic = null, lastAntic = -1;
-  function stopAntic() { if (antic) { antic.cancel(); antic = null; } }
+  function stopAntic() {
+    if (antic) { antic.cancel(); antic = null; }
+    Array.prototype.forEach.call(doc.querySelectorAll('.uzio-star'), function (el) { el.remove(); });
+  }
   function move(body, frames, ms) { antic = body.animate(frames, { duration: ms, easing: 'ease-in-out' }); }
   var ANTICS = [
     function wiggle(body) {
@@ -1133,13 +1136,35 @@
       { translate: '0 0', rotate: '0deg' }, { translate: '-10% -5%', rotate: '-15deg' }, { translate: '0 2%', rotate: '0deg', scale: '1.08 .92' }, { translate: '10% -5%', rotate: '15deg' }, { translate: '0 2%', rotate: '0deg', scale: '1.08 .92' },
       { translate: '-10% -5%', rotate: '-15deg' }, { translate: '0 -9%', scale: '.92 1.08' }, { translate: '10% -5%', rotate: '15deg' }, { translate: '0 0', rotate: '0deg', scale: '1' }],
       say: { en: 'Watch these moves! 💃', tr: 'Şu hareketlere bak! 💃', fr: 'Regarde ces pas ! 💃', de: 'Schau dir diese Moves an! 💃' } },
-    spin: { words: ['spin', 'dön', 'tourne', 'dreh dich', 'drehen'], ms: 1300, frames: [
-      { rotate: '0deg', scale: '1' }, { rotate: '-25deg', scale: '.95', offset: .15 }, { rotate: '740deg', scale: '1.05', offset: .85 }, { rotate: '720deg', scale: '1' }],
+    spin: { words: ['spin', 'dön', 'tourne', 'dreh dich', 'drehen'], ms: 2200, then: dizzy, frames: [ /* wind up, 8 fast turns, skid to a stop */
+      { rotate: '0deg', scale: '1', easing: 'ease-out' }, { rotate: '-35deg', scale: '1.08 .92', offset: .1, easing: 'cubic-bezier(.45, 0, .55, 1)' },
+      { rotate: '2905deg', scale: '.94', offset: .93, easing: 'ease-out' }, { rotate: '2880deg', scale: '1' }],
       say: { en: 'Wheee! 🌀', tr: 'Vuuuu! 🌀', fr: 'Youhouuu ! 🌀', de: 'Huiii! 🌀' } },
     jump: { words: ['jump', 'zıpla', 'saute', 'spring', 'hüpf'], ms: 1200, frames: [
       { translate: '0 0', scale: '1' }, { translate: '0 5%', scale: '1.15 .82', offset: .2 }, { translate: '0 -24%', scale: '.9 1.12', offset: .5 }, { translate: '0 3%', scale: '1.14 .85', offset: .75 }, { translate: '0 -4%', scale: '.97 1.03', offset: .88 }, { translate: '0 0', scale: '1' }],
       say: { en: 'Boing! 🚀', tr: 'Hoop! 🚀', fr: 'Hop là ! 🚀', de: 'Boing! 🚀' } }
   };
+  var DIZZY = { en: 'Whoa… the room is still spinning 😵‍💫', tr: 'Off… oda hâlâ dönüyor 😵‍💫', fr: 'Ouh là… la pièce tourne encore 😵‍💫', de: 'Uff… der Raum dreht sich immer noch 😵‍💫' };
+  function dizzy(lang) { /* a woozy sway that slowly settles, with stars circling its head */
+    var host = doc.getElementById('roomOrb'), ms = 3200;
+    if (!host || orbAt !== 'room' || !orbBodyEl) return;
+    var d = addBot(); d.innerHTML = fmt(DIZZY[lang] || DIZZY.en); scrollDown();
+    move(orbBodyEl, [
+      { rotate: '0deg', translate: '0 0', scale: '1' }, { rotate: '-20deg', translate: '-9% 2%', scale: '1.05 .95' }, { rotate: '17deg', translate: '8% 4%' }, { rotate: '-13deg', translate: '-6% 3%', scale: '.96 1.04' },
+      { rotate: '10deg', translate: '5% 2%' }, { rotate: '-6deg', translate: '-3% 1%' }, { rotate: '3deg', translate: '1% 0' }, { rotate: '0deg', translate: '0 0', scale: '1' }], ms);
+    [0, 1, 2].forEach(function (n) {
+      var star = doc.createElement('span'), path = [];
+      star.className = 'uzio-star'; star.textContent = '★'; star.setAttribute('aria-hidden', 'true');
+      for (var i = 0; i <= 12; i++) {
+        var a = (i / 12 + n / 3) * Math.PI * 2, front = Math.sin(a);
+        path.push({ left: (50 + 30 * Math.cos(a)) + '%', top: (17 + 7 * front) + '%', scale: String(1 + .35 * front) });
+      }
+      host.appendChild(star);
+      star.animate(path, { duration: 1100, iterations: ms / 1100 });
+      star.animate([{ opacity: 0 }, { opacity: 1, offset: .1 }, { opacity: 1, offset: .8 }, { opacity: 0 }], { duration: ms, fill: 'both' }).onfinish = function () { star.remove(); };
+    });
+  }
+
   function magicWord(text, lang) {
     var t = String(text).toLocaleLowerCase(lang).replace(/[.!?,]/g, ' ').replace(/\b(uzio|please)\b/g, ' ').replace(/\s+/g, ' ').trim();
     return Object.keys(MAGIC).filter(function (k) { return MAGIC[k].words.indexOf(t) > -1; })[0];
@@ -1148,10 +1173,12 @@
     var m = MAGIC[key], d = addBot(); d.innerHTML = fmt(m.say[lang] || m.say.en); scrollDown();
     if (reduce || fly || orbAt !== 'room' || !orbBodyEl || !orbBodyEl.animate) return;
     stopAntic(); move(orbBodyEl, m.frames, m.ms);
+    if (m.then) antic.onfinish = function () { m.then(lang); };
   }
 
   function playAntic() {
     var host = doc.getElementById('roomOrb'), typed = input && input.value;
+    if (antic && antic.playState === 'running') return; /* let a trick finish */
     if (reduce || doc.hidden || !state.room || state.busy || rec || fly || typed || orbAt !== 'room' || !host || !orbBodyEl || !orbBodyEl.animate) return;
     var list = timeOfDay() === 'night' ? ANTICS.concat(yawn) : ANTICS; /* late at night it also yawns */
     var n = Math.floor(Math.random() * (list.length - 1));
