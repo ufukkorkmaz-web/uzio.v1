@@ -293,8 +293,6 @@ button { font: inherit; color: inherit; }
 /* ---------- Page ---------- */
 main { width: min(1080px, 100%); margin: 0 auto; padding: 22px max(20px, env(safe-area-inset-right, 0px)) 150px max(20px, env(safe-area-inset-left, 0px)); }
 .large { display: grid; gap: 12px; margin-bottom: 30px; max-width: 760px; }
-.eyebrow { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--fg2); }
-.eyebrow::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
 h1 { margin: 0; font-size: clamp(36px, 6.4vw, 60px); line-height: 1.03; font-weight: 800; letter-spacing: -.035em; text-wrap: balance; }
 .large p { margin: 0; max-width: 52ch; font-size: 19px; line-height: 1.45; color: var(--fg2); letter-spacing: -.01em; }
 .large.swap .t { animation: rise .6s var(--smooth) both; }
