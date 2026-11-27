@@ -1,333 +1,1182 @@
-/* Uzio AI chat panel. Uses the site's own theme variables, so light/dark and accent colours just work. */
-.uai {
-  --uai-accent: var(--accent, #007AFF);
-  position: fixed; z-index: 90;
-  right: var(--uai-r, max(14px, env(safe-area-inset-right, 0px)));
-  bottom: var(--uai-b, calc(18px + env(safe-area-inset-bottom, 0px)));
-  width: min(400px, calc(100vw - 28px));
-  height: min(620px, calc(100dvh - 40px));
-  display: flex; flex-direction: column; overflow: hidden;
-  border-radius: 28px;
-  color: var(--fg, #000); font-family: inherit;
-  background: color-mix(in srgb, var(--card, #fff) 80%, transparent);
-  -webkit-backdrop-filter: blur(34px) saturate(1.8); backdrop-filter: blur(34px) saturate(1.8);
-  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .7)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)),
-    var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .14)), 0 24px 60px color-mix(in srgb, var(--uai-accent) 16%, transparent);
-  transform-origin: 90% 100%;
-  opacity: 0; visibility: hidden; transform: translateY(18px) scale(.92);
-  transition: opacity .25s ease, transform .45s cubic-bezier(.32, 1.25, .45, 1), visibility 0s linear .45s;
-}
-/* on the game hub the chat grows from the exact spot where the orb sits (--uai-r / --uai-b are measured in JS) */
-.uai--hub { height: min(620px, calc(100dvh - var(--uai-b, 18px) - 84px)); }
-.uai.open { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+/* Uzio AI: the orb's brain.
+   A client-side assistant that knows the whole Uzio site (no server, no API key, no libraries).
+   Part 1 is the engine (knowledge base + matcher), Part 2 is the chat panel that opens from the orb. */
+(function (root, factory) {
+  var api = factory(root);
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.UzioAI = api;
+})(typeof window !== 'undefined' ? window : globalThis, function (win) {
+  'use strict';
 
-.uai-head { display: flex; align-items: center; gap: 12px; padding: 14px 12px 12px 16px; border-bottom: .5px solid var(--sep, rgba(60, 60, 67, .2)); }
-/* the header slot holds the real Uzio orb (moved here from the page when the chat opens) */
-.uai-av { position: relative; flex: none; width: 64px; height: 64px; margin: -10px -4px -10px -8px; }
-.uai-av .orb-body, .uai-fly .orb-body {
-  position: absolute; inset: 0; width: 100%; height: 100%; animation: none;
-  filter: drop-shadow(0 4px 8px var(--orb-shadow, rgba(60, 70, 150, .25)));
-}
-/* welcome window: the real orb replaces the old "U" badge */
-.onb-orb.has-orb { overflow: visible; background: none; box-shadow: none; animation: none; }
-.onb-orb.has-orb::before, .onb-orb.has-orb > span:not(.orb-body) { display: none; }
-.onb-orb .orb-body { position: absolute; inset: -14px; width: auto; height: auto; animation: none; filter: drop-shadow(0 8px 14px var(--orb-shadow, rgba(60, 70, 150, .25))); }
-.uai-av canvas, .uai-fly canvas, .onb-orb canvas { display: block; width: 100%; height: 100%; }
-.uai-fly { position: fixed; z-index: 95; margin: 0; pointer-events: none; transform-origin: 0 0; }
-.uai-fly.no-gl canvas, .uai-av.no-gl canvas, .onb-orb.no-gl canvas { background: conic-gradient(from 0deg, #1ea7ff, #ff2d75, #b8ff1f, #b44dff, #ffa11a, #1ea7ff); clip-path: circle(37%); }
-.uai-id { flex: 1; min-width: 0; display: grid; gap: 1px; }
-.uai-id b { font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
-.uai-id small { font-size: 12.5px; color: var(--fg2, rgba(60, 60, 67, .62)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.uai-ib {
-  flex: none; width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer;
-  background: var(--fill, rgba(120, 120, 128, .12)); color: var(--fg, #000); transition: transform .3s cubic-bezier(.32, 1.25, .45, 1), background .2s;
-}
-.uai-ib:hover { background: var(--fill2, rgba(120, 120, 128, .2)); transform: scale(1.08); }
-.uai-ib svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  var LANGS = ['en', 'tr', 'fr', 'de'];
+  function T(en, tr, fr, de) { return { en: en, tr: tr, fr: fr, de: de }; }
 
-.uai-log { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 16px 14px 8px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
-.uai-msg { max-width: 88%; padding: 10px 14px; border-radius: 20px; font-size: 15px; line-height: 1.42; letter-spacing: -.01em; overflow-wrap: anywhere; animation: uaiIn .35s cubic-bezier(.32, 1.25, .45, 1) both; }
-.uai-msg b { font-weight: 700; }
-.uai-msg code { font-size: .88em; padding: 1px 6px; border-radius: 6px; background: var(--fill2, rgba(120, 120, 128, .2)); }
-.uai-bot { align-self: flex-start; border-bottom-left-radius: 7px; background: var(--fill, rgba(120, 120, 128, .12)); }
-.uai-me { align-self: flex-end; border-bottom-right-radius: 7px; color: #fff; background: linear-gradient(160deg, color-mix(in srgb, var(--uai-accent) 75%, #fff), var(--uai-accent)); box-shadow: 0 6px 16px color-mix(in srgb, var(--uai-accent) 32%, transparent); }
-.uai-typing { display: flex; gap: 5px; padding: 14px 16px; }
-.uai-typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--fg2, rgba(60, 60, 67, .6)); animation: uaiDot 1s ease-in-out infinite; }
-.uai-typing i:nth-child(2) { animation-delay: .15s; }
-.uai-typing i:nth-child(3) { animation-delay: .3s; }
+  /* ======================================================================
+     PART 1 · KNOWLEDGE BASE
+     k = keywords (all four languages, accents stripped), w = weight, t = title (also used for chips),
+     a = answer (T(...) or a function), go = tabs to offer, rel = related topics to offer.
+     ====================================================================== */
+  var VIEW_NAME = {
+    home:     T('Home', 'Ana Sayfa', 'Accueil', 'Start'),
+    play:     T('Play', 'Oyna', 'Jouer', 'Spielen'),
+    watch:    T('Watch', 'İzle', 'Regarder', 'Ansehen'),
+    perks:    T('Perks', 'Avantajlar', 'Avantages', 'Extras'),
+    'uzio-ai': T('Uzio AI', 'Uzio AI', 'Uzio AI', 'Uzio AI')
+  };
+  var OPEN = T('Open {v}', '{v} sayfasını aç', 'Ouvrir {v}', '{v} öffnen');
 
-.uai-extra { margin-top: 10px; }
-.uai-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.uai-go {
-  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0; border-radius: 99px; cursor: pointer;
-  font: inherit; font-size: 14px; font-weight: 650; color: #fff; background: var(--uai-accent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 6px 14px color-mix(in srgb, var(--uai-accent) 36%, transparent);
-  transition: transform .3s cubic-bezier(.32, 1.25, .45, 1);
-}
-.uai-go:hover { transform: translateY(-1px) scale(1.03); }
+  var KB = [
+    /* ---------- the basics ---------- */
+    { id: 'about', t: T('What is Uzio?', 'Uzio nedir?', 'Qu’est-ce qu’Uzio ?', 'Was ist Uzio?'), w: 1.1,
+      k: ['uzio', 'what is uzio', 'who are you', 'what is this', 'what is this site', 'what is this website', 'game master', 'nedir', 'nesin', 'kimsin', 'hakkinda', 'qu est ce', 'qui es tu', 'c est quoi', 'was ist', 'wer bist du', 'uber'],
+      a: T('**Uzio** is a game hub with an AI game master. You play fast rounds, chase high scores, keep streaks alive, earn XP and coins, and unlock perks. The site has four tabs: **Home**, **Play**, **Watch**, **Perks**, plus **Uzio AI**, where I can build challenges around you.',
+           '**Uzio**, yapay zekâ oyun ustası olan bir oyun merkezi. Hızlı turlar oynar, rekor kırar, serini korur, XP ve jeton kazanır, avantajların kilidini açarsın. Sitede **Ana Sayfa**, **Oyna**, **İzle**, **Avantajlar** ve sana göre meydan okumalar kurduğum **Uzio AI** sekmeleri var.',
+           '**Uzio** est un hub de jeu avec un maître du jeu IA. Tu enchaînes des manches rapides, bats des records, gardes ta série, gagnes des XP et des pièces, et débloques des avantages. Le site a quatre onglets : **Accueil**, **Jouer**, **Regarder**, **Avantages**, plus **Uzio AI** où je crée des défis pour toi.',
+           '**Uzio** ist ein Game-Hub mit einem KI-Spielleiter. Du spielst schnelle Runden, jagst Highscores, hältst deine Serie, sammelst XP und Münzen und schaltest Extras frei. Die Seite hat die Tabs **Start**, **Spielen**, **Ansehen**, **Extras** und **Uzio AI**, wo ich Challenges für dich baue.'),
+      go: ['play'], rel: ['can', 'tabs', 'how'] },
 
-.uai-chips { display: flex; gap: 8px; padding: 6px 14px 10px; overflow-x: auto; scrollbar-width: none; min-height: 0; }
-.uai-chips::-webkit-scrollbar { display: none; }
-.uai-chips:empty { display: none; }
-.uai-chip {
-  flex: none; padding: 8px 14px; border: 0; border-radius: 99px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap;
-  color: color-mix(in srgb, var(--uai-accent) 85%, var(--fg, #000)); background: color-mix(in srgb, var(--uai-accent) 14%, transparent);
-  transition: transform .3s cubic-bezier(.32, 1.25, .45, 1), background .2s; animation: uaiIn .4s cubic-bezier(.32, 1.25, .45, 1) both;
-}
-.uai-chip:hover { background: color-mix(in srgb, var(--uai-accent) 24%, transparent); transform: translateY(-1px); }
+    { id: 'can', t: T('What can you do?', 'Neler yapabilirsin?', 'Que sais-tu faire ?', 'Was kannst du?'),
+      k: ['what can you do', 'help', 'capabilities', 'features', 'abilities', 'what do you know', 'neler yapabilirsin', 'ne yapabilirsin', 'yardim', 'que sais tu faire', 'aide', 'was kannst du', 'hilfe', 'kannst du'],
+      a: T('I know everything on this site: every game mode, the video drops, the perk shop and its prices, XP, levels, coins, streaks, quests, events, languages, the menu and how your profile works. I can also **invent a challenge** for you on the spot. Try “give me a hard challenge”. I can also **open any tab** for you: just say “open Watch”. You can even tap 🎤 and talk to me.',
+           'Bu sitedeki her şeyi biliyorum: tüm oyun modları, video içerikleri, avantaj mağazası ve fiyatları, XP, seviyeler, jetonlar, seriler, görevler, etkinlikler, diller, menü ve profilin nasıl çalıştığı. Ayrıca anında sana **bir meydan okuma** üretebilirim. “Bana zor bir meydan okuma ver” de. İstersen **herhangi bir sekmeyi de açarım**: “İzle’yi aç” demen yeterli. 🎤’a dokunup benimle konuşabilirsin de.',
+           'Je connais tout sur ce site : chaque mode de jeu, les vidéos, la boutique d’avantages et ses prix, les XP, niveaux, pièces, séries, quêtes, événements, langues, le menu et ton profil. Je peux aussi **inventer un défi** sur-le-champ. Essaie « donne-moi un défi difficile ». Je peux aussi **ouvrir n’importe quel onglet** : dis « ouvre Regarder ». Tu peux aussi toucher 🎤 et me parler.',
+           'Ich kenne alles auf dieser Seite: jeden Spielmodus, die Videos, den Perk-Shop samt Preisen, XP, Level, Münzen, Serien, Quests, Events, Sprachen, das Menü und dein Profil. Außerdem kann ich dir sofort **eine Challenge erfinden**. Sag einfach „gib mir eine schwere Challenge“. Ich kann auch **jeden Tab öffnen**: sag „öffne Ansehen“. Du kannst auch auf 🎤 tippen und mit mir sprechen.'),
+      go: ['uzio-ai'], rel: ['challenge', 'play', 'perks'] },
 
-.uai-form { display: flex; gap: 8px; padding: 6px 12px calc(12px + env(safe-area-inset-bottom, 0px) * 0); align-items: center; }
-.uai-input {
-  flex: 1; min-width: 0; height: 44px; padding: 0 16px; border: 0; border-radius: 99px; outline: none;
-  font: inherit; font-size: 16px; color: var(--fg, #000); background: var(--fill, rgba(120, 120, 128, .12));
-  transition: box-shadow .25s;
-}
-.uai-input::placeholder { color: var(--fg2, rgba(60, 60, 67, .55)); }
-.uai-input:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--uai-accent) 40%, transparent); }
-.uai-mic {
-  flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer;
-  color: var(--fg, #000); background: var(--fill, rgba(120, 120, 128, .12));
-  transition: transform .3s cubic-bezier(.32, 1.25, .45, 1), background .2s, color .2s;
-}
-.uai-mic:disabled { opacity: .35; cursor: default; }
-.uai-mic:hover:not(:disabled) { transform: scale(1.08); background: var(--fill2, rgba(120, 120, 128, .2)); }
-.uai-mic svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
-.uai-mic.on, .uai-mic.on:hover:not(:disabled) { color: #fff; background: #ff3b30; animation: uaiPulse 1.4s ease-out infinite; }
-.uai-listening .uai-input { box-shadow: 0 0 0 3px rgba(255, 59, 48, .35); }
-@keyframes uaiPulse { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, .5); } 100% { box-shadow: 0 0 0 14px rgba(255, 59, 48, 0); } }
-.uai-send {
-  flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer; color: #fff;
-  background: var(--uai-accent); box-shadow: 0 6px 16px color-mix(in srgb, var(--uai-accent) 40%, transparent);
-  transition: transform .3s cubic-bezier(.32, 1.25, .45, 1), opacity .2s;
-}
-.uai-send:hover:not(:disabled) { transform: scale(1.08); }
-.uai-send:disabled { opacity: .35; cursor: default; box-shadow: none; }
-.uai-send svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.uai :focus-visible { outline: 3px solid color-mix(in srgb, var(--uai-accent) 70%, transparent); outline-offset: 2px; }
+    { id: 'how', t: T('How do I get started?', 'Nasıl başlarım?', 'Comment commencer ?', 'Wie fange ich an?'),
+      k: ['get started', 'how to start', 'start', 'begin', 'how does it work', 'how do i play', 'how to play', 'tutorial', 'guide', 'nasil baslarim', 'nasil oynanir', 'baslamak', 'nasil calisir', 'comment commencer', 'comment jouer', 'comment ca marche', 'wie fange', 'wie spiele', 'wie funktioniert', 'anfangen'],
+      a: T('1) Tell me your name and play style in the welcome screen. 2) Open **Play** and pick a mode, or hit **Surprise Me**. 3) Every round earns **XP** and **coins**; finish **daily quests** and keep your **streak** alive. 4) Spend coins in **Perks**, and ask **Uzio AI** whenever you want a custom challenge.',
+           '1) Karşılama ekranında adını ve oyun tarzını söyle. 2) **Oyna** sekmesini aç ve bir mod seç ya da **Surprise Me** de. 3) Her tur **XP** ve **jeton** kazandırır; **günlük görevleri** bitir, **serini** koru. 4) Jetonları **Avantajlar** sekmesinde harca, özel bir meydan okuma için **Uzio AI**’a sor.',
+           '1) Dis-moi ton prénom et ton style de jeu à l’écran d’accueil. 2) Ouvre **Jouer** et choisis un mode, ou **Surprise Me**. 3) Chaque manche rapporte des **XP** et des **pièces** ; termine les **quêtes du jour** et garde ta **série**. 4) Dépense tes pièces dans **Avantages** et demande à **Uzio AI** un défi sur mesure.',
+           '1) Nenne mir im Willkommensbildschirm deinen Namen und Spielstil. 2) Öffne **Spielen** und wähle einen Modus oder **Surprise Me**. 3) Jede Runde bringt **XP** und **Münzen**; erledige **Tagesquests** und halte deine **Serie**. 4) Gib Münzen bei **Extras** aus und frag **Uzio AI** nach einer eigenen Challenge.'),
+      go: ['play'], rel: ['modes', 'quests', 'onboarding'] },
 
-/* the orb glows a little while the chat is open */
-.uzio-orb.uai-active { pointer-events: none; }
-.uzio-orb.uai-active .orb-label { opacity: 0 !important; }
+    { id: 'tabs', t: T('The tabs', 'Sekmeler', 'Les onglets', 'Die Tabs'),
+      k: ['tabs', 'tab', 'navigation', 'menu bar', 'sections', 'pages', 'where is', 'where can i find', 'sekmeler', 'sayfalar', 'nerede', 'onglets', 'pages', 'ou est', 'ou trouver', 'seiten', 'wo finde', 'navigieren'],
+      a: T('The top bar has five tabs: **Home** (your hub: featured mission, quests, events), **Play** (8 game modes), **Watch** (6 video drops), **Perks** (status, wallet and shop) and **Uzio AI** (your game master). On the right: search, and the account menu with language and dark mode.',
+           'Üst çubukta beş sekme var: **Ana Sayfa** (öne çıkan görev, görevler, etkinlikler), **Oyna** (8 oyun modu), **İzle** (6 video), **Avantajlar** (durum, cüzdan, mağaza) ve **Uzio AI** (oyun ustan). Sağda arama ile dil ve karanlık mod içeren hesap menüsü var.',
+           'La barre du haut a cinq onglets : **Accueil** (mission à la une, quêtes, événements), **Jouer** (8 modes), **Regarder** (6 vidéos), **Avantages** (statut, portefeuille, boutique) et **Uzio AI**. À droite : la recherche et le menu du compte (langue, mode sombre).',
+           'Die obere Leiste hat fünf Tabs: **Start** (Mission, Quests, Events), **Spielen** (8 Modi), **Ansehen** (6 Videos), **Extras** (Status, Wallet, Shop) und **Uzio AI**. Rechts: Suche und das Kontomenü mit Sprache und Dunkelmodus.'),
+      go: ['home'], rel: ['search', 'menu', 'home'] },
 
-@keyframes uaiIn { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
-@keyframes uaiDot { 0%, 80%, 100% { transform: translateY(0); opacity: .4; } 40% { transform: translateY(-5px); opacity: 1; } }
+    /* ---------- home ---------- */
+    { id: 'home', t: T('Home', 'Ana Sayfa', 'Accueil', 'Start'),
+      k: ['home', 'hub', 'dashboard', 'main page', 'landing', 'ana sayfa', 'anasayfa', 'accueil', 'start seite', 'startseite', 'enter the game', 'oyuna gir'],
+      a: T('**Home** is your hub. It shows the **Featured mission** (Neon Vault), a **Jump in** row with Play, Perks, Watch and Uzio AI, an **Uzio challenge drop**, your **Daily quests** and the current **Limited-time event**. The very first page (the landing page) says “Meet Uzio. Your game master.” with **Enter the game** and **Quick play**.',
+           '**Ana Sayfa** senin merkezin. **Öne çıkan görev** (Neon Vault), Oyna/Avantajlar/İzle/Uzio AI için **Hemen başla** satırı, bir **Uzio meydan okuma önerisi**, **günlük görevlerin** ve güncel **sınırlı süreli etkinlik** burada. İlk sayfa (açılış) “Uzio ile tanış. Oyun ustan.” der ve **Oyuna gir** ile **Hızlı oyun** butonlarını sunar.',
+           '**Accueil** est ton hub : la **mission à la une** (Neon Vault), une rangée **Jump in** vers Jouer, Avantages, Regarder et Uzio AI, un **défi d’Uzio**, tes **quêtes du jour** et l’**événement limité**. La page d’arrivée affiche « Découvre Uzio » avec **Entrer** et **Jeu rapide**.',
+           '**Start** ist dein Hub: die **Featured Mission** (Neon Vault), eine **Jump in**-Reihe zu Spielen, Extras, Ansehen und Uzio AI, ein **Uzio-Challenge-Drop**, deine **Tagesquests** und das **zeitlich begrenzte Event**. Die Startseite zeigt „Lerne Uzio kennen“ mit **Enter the game** und **Schnelles Spiel**.'),
+      go: ['home'], rel: ['mission', 'quests', 'event'] },
 
-/* landing page: the orb isn't fixed there, so the panel docks bottom-right */
-@media (max-width: 640px) {
-  .uai { right: var(--uai-r, 10px); width: calc(100vw - 20px - (var(--uai-r, 10px) - 10px)); border-radius: 26px; }
-  .uai--hub { height: min(640px, calc(100dvh - var(--uai-b, 18px) - 84px)); }
-  .uai:not(.uai--hub) { height: min(640px, calc(100dvh - 24px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .uai, .uai-msg, .uai-chip { transition: opacity .15s linear; animation: none; transform: none; }
-  .uai-typing i, .uai-mic.on { animation: none; }
-}
+    { id: 'mission', t: T('Neon Vault mission', 'Neon Vault görevi', 'Mission Neon Vault', 'Neon-Vault-Mission'),
+      k: ['neon vault', 'neon kasa', 'kasa', 'neon', 'vault', 'featured mission', 'mission', 'featured', 'continue', 'one cikan gorev', 'gorev', 'mission a la une', 'mission en vedette', 'featured mission'],
+      a: T('**Neon Vault** is the featured mission on Home: clear **3 rounds**, keep your combo alive and crack the final vault. You’re **60% through**, with about **4 minutes left**, **+120 XP** on the line and a **2× combo** running. Hit **Continue** to pick it up.',
+           '**Neon Vault** (sitede “Neon Kasa”), Ana Sayfa’daki öne çıkan görev: **3 turu** bitir, kombonu koru ve son kasayı aç. **%60** tamamlandı, yaklaşık **4 dk** kaldı, **+120 XP** ve **2× kombo** seni bekliyor. Devam etmek için **Devam et**’e bas.',
+           '**Neon Vault** est la mission à la une : termine **3 manches**, garde ton combo et ouvre le coffre final. Tu es à **60 %**, il reste environ **4 min**, **+120 XP** à gagner et un **combo 2×** en cours. Appuie sur **Continuer**.',
+           '**Neon Vault** ist die Featured Mission: Schließe **3 Runden** ab, halte deine Combo und knacke den finalen Tresor. Du bist bei **60 %**, es bleiben etwa **4 Min.**, **+120 XP** warten und eine **2×-Combo** läuft. Tippe auf **Weiter**.'),
+      go: ['home'], rel: ['quests', 'xp', 'combo'] },
 
-/* ======================================================================
-   Uzio's Room (Uzio AI tab): one fixed screen. A big floating orb, one slim glass chat bar under it.
-   No frame, no floor, no title. The layout switch lives in style.css (body.is-room).
-   ====================================================================== */
-.uzio-orb.away { display: none !important; } /* the corner chatbot is removed while the room is open */
+    { id: 'quests', t: T('Daily quests', 'Günlük görevler', 'Quêtes du jour', 'Tagesquests'),
+      k: ['daily quest', 'daily quests', 'quest', 'quests', 'daily', 'score hunter', 'combo keeper', 'uzio dare', 'dare', 'task', 'challenge of the day', 'gunluk gorev', 'gorevler', 'gunluk', 'quete', 'quetes', 'quete du jour', 'tagesquest', 'quests', 'taglich', 'aufgabe'],
+      a: T('There are **3 daily quests** (2/3 complete right now): ✅ **Score Hunter** (beat one personal best), ✅ **Combo Keeper** (reach a 5× combo) and ⭕ **Uzio Dare** (complete one AI-generated challenge). Stuck on one? A **Reroll Token** (90 coins) swaps a daily quest instantly.',
+           '**3 günlük görev** var (şu an 2/3 tamam): ✅ **Score Hunter** (bir kişisel rekoru geç), ✅ **Combo Keeper** (5× kombo yap) ve ⭕ **Uzio Dare** (yapay zekânın ürettiği bir meydan okumayı tamamla). Takıldın mı? **Reroll Token** (90 jeton) bir görevi anında değiştirir.',
+           'Il y a **3 quêtes du jour** (2/3 terminées) : ✅ **Score Hunter** (battre un record perso), ✅ **Combo Keeper** (atteindre un combo 5×) et ⭕ **Uzio Dare** (finir un défi généré par l’IA). Bloqué ? Un **Reroll Token** (90 pièces) change une quête.',
+           'Es gibt **3 Tagesquests** (aktuell 2/3 erledigt): ✅ **Score Hunter** (einen persönlichen Rekord schlagen), ✅ **Combo Keeper** (5×-Combo erreichen) und ⭕ **Uzio Dare** (eine KI-Challenge abschließen). Hängst du fest? Ein **Reroll Token** (90 Münzen) tauscht eine Quest sofort.'),
+      go: ['home'], rel: ['challenge', 'shop', 'event'] },
 
-.room { --room-accent: var(--accent, #ffa11a); flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: uaiIn .5s cubic-bezier(.32, 1.25, .45, 1) both; }
+    { id: 'event', t: T('Double XP Hour', 'Çift XP Saati', 'Heure XP double', 'Double-XP-Stunde'),
+      k: ['event', 'events', 'double xp', 'double xp hour', 'limited time', 'limited-time', 'timer', 'mystery perk', 'etkinlik', 'cift xp', 'sinirli', 'evenement', 'xp double', 'heure', 'veranstaltung', 'doppelte xp', 'begrenzt'],
+      a: T('The current **limited-time event** is **Double XP Hour**: complete **any three games** before the timer expires to unlock a **mystery perk**. You can jump in from the Home tab with **Enter event**.',
+           'Güncel **sınırlı süreli etkinlik** **Çift XP Saati**: süre dolmadan **herhangi üç oyunu** tamamla ve **gizemli bir avantajın** kilidini aç. Ana Sayfa’dan **Etkinliğe gir** ile katılabilirsin.',
+           'L’**événement limité** actuel est l’**Heure XP double** : termine **trois jeux** avant la fin du minuteur pour débloquer un **avantage mystère**. Rejoins-le depuis Accueil avec **Enter event**.',
+           'Das aktuelle **zeitlich begrenzte Event** ist die **Double-XP-Stunde**: Schließe **drei beliebige Spiele** ab, bevor der Timer abläuft, und schalte einen **Mystery Perk** frei. Starte über **Enter event** auf Start.'),
+      go: ['home'], rel: ['xp', 'boost', 'quests'] },
 
-/* the stage is just the free space above the chat: the orb scales to it */
-.room-stage { position: relative; flex: 1; min-height: 0; width: 100%; container-type: size; }
-.room-glow {
-  position: absolute; left: 50%; top: 50%; width: min(96cqh, 100cqw); aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 0; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(circle, color-mix(in srgb, var(--room-accent) 34%, transparent), transparent 68%);
-  animation: roomBreath 4.2s ease-in-out infinite;
-}
-/* the canvas has transparent margins around the glass sphere, so the box is a bit bigger than the stage */
-.room-orb { position: absolute; left: 50%; top: 50%; width: min(60dvh, 100%); width: min(122cqh, 100cqw, 760px); aspect-ratio: 1; transform: translate(-50%, -50%); z-index: 2; cursor: pointer; }
-.room-orb .orb-body { position: absolute; inset: 0; width: 100%; height: 100%; animation: orbfloat 4.2s ease-in-out infinite; filter: drop-shadow(0 18px 22px var(--orb-shadow, rgba(60, 70, 150, .3))); }
-.room-orb canvas { display: block; width: 100%; height: 100%; }
-.room-orb.no-gl canvas { background: conic-gradient(from 0deg, #1ea7ff, #ff2d75, #b8ff1f, #b44dff, #ffa11a, #1ea7ff); clip-path: circle(37%); }
-/* Uzio reacts: a red ring while listening, a quicker pulse while thinking */
-.room.listening .room-glow { animation: roomListen 1.3s ease-out infinite; background: radial-gradient(circle, rgba(255, 59, 48, .32), transparent 68%); }
-.room.thinking .room-glow { animation: roomBreath 1.2s ease-in-out infinite; }
+    /* ---------- play ---------- */
+    { id: 'modes', t: T('Game modes', 'Oyun modları', 'Modes de jeu', 'Spielmodi'),
+      k: ['game modes', 'modes', 'mode', 'games', 'game', 'play', 'all games', 'which games', 'list of games', 'oyun', 'oyunlar', 'modlar', 'oyna', 'jeux', 'jeu', 'modes de jeu', 'jouer', 'spiele', 'spiel', 'spielen', 'modi'],
+      a: T('**Play** has 8 modes:\n⚡ **Rapid Fire** (90 sec, score attack)\n👾 **Boss Battle** (5 min, +180 XP)\n🧩 **Puzzle Drop** (3 min, logic)\n🎯 **Perfect Run** (hard, combo)\n🏁 **Beat Uzio** (2 min, AI duel)\n💥 **Risk It** (high stakes, coins)\n🗺️ **Quest Run** (6–8 min, adventure)\n🎲 **Surprise Me** (random, bonus XP).\nAsk me about any of them!',
+           '**Oyna** sekmesinde 8 mod var:\n⚡ **Rapid Fire** (90 sn, skor saldırısı)\n👾 **Boss Battle** (5 dk, +180 XP)\n🧩 **Puzzle Drop** (3 dk, mantık)\n🎯 **Perfect Run** (zor, kombo)\n🏁 **Beat Uzio** (2 dk, yapay zekâ düellosu)\n💥 **Risk It** (yüksek risk, jeton)\n🗺️ **Quest Run** (6–8 dk, macera)\n🎲 **Surprise Me** (rastgele, bonus XP).\nHerhangi birini sorabilirsin!',
+           '**Jouer** propose 8 modes :\n⚡ **Rapid Fire** (90 s, attaque de score)\n👾 **Boss Battle** (5 min, +180 XP)\n🧩 **Puzzle Drop** (3 min, logique)\n🎯 **Perfect Run** (difficile, combo)\n🏁 **Beat Uzio** (2 min, duel IA)\n💥 **Risk It** (gros enjeux, pièces)\n🗺️ **Quest Run** (6–8 min, aventure)\n🎲 **Surprise Me** (aléatoire, XP bonus).\nDemande-moi des détails sur n’importe lequel !',
+           '**Spielen** hat 8 Modi:\n⚡ **Rapid Fire** (90 Sek., Score-Attacke)\n👾 **Boss Battle** (5 Min., +180 XP)\n🧩 **Puzzle Drop** (3 Min., Logik)\n🎯 **Perfect Run** (schwer, Combo)\n🏁 **Beat Uzio** (2 Min., KI-Duell)\n💥 **Risk It** (hohes Risiko, Münzen)\n🗺️ **Quest Run** (6–8 Min., Abenteuer)\n🎲 **Surprise Me** (zufällig, Bonus-XP).\nFrag mich zu jedem davon!'),
+      go: ['play'], rel: ['rapid', 'boss', 'surprise'] },
 
-.room-chat { flex: none; width: min(620px, 100%); min-width: 0; position: relative; z-index: 5; }
+    { id: 'rapid', t: T('Rapid Fire', 'Rapid Fire', 'Rapid Fire', 'Rapid Fire'),
+      k: ['rapid fire', 'rapid', 'fire', 'score attack', 'speed', 'fast', 'hizli', 'rapide', 'schnell'],
+      a: T('⚡ **Rapid Fire** is the score-attack mode: answer, react and build a combo before the clock runs out. It lasts **90 seconds**, so it’s the quickest way to chase a personal best (and tick off **Score Hunter**).',
+           '⚡ **Rapid Fire** skor saldırısı modu: süre bitmeden cevap ver, tepki göster ve kombo kur. **90 saniye** sürer; kişisel rekor kovalamanın (ve **Score Hunter** görevini bitirmenin) en hızlı yolu.',
+           '⚡ **Rapid Fire** est le mode attaque de score : réponds, réagis et construis un combo avant la fin du temps. Il dure **90 secondes**, idéal pour battre un record (et valider **Score Hunter**).',
+           '⚡ **Rapid Fire** ist der Score-Attack-Modus: antworte, reagiere und baue eine Combo auf, bevor die Zeit abläuft. Er dauert **90 Sekunden** – der schnellste Weg zum persönlichen Rekord (und für **Score Hunter**).'),
+      go: ['play'], rel: ['combo', 'modes', 'perfect'] },
 
-/* the chat dock: [history button] [ input · mic · send ] with the quick replies above. The history pops up over the orb. */
-.uai-hist { display: none; }
-.uai-field { display: contents; }
-.uai.uai--room {
-  position: relative; right: auto; bottom: auto; left: auto; width: 100%; height: auto; overflow: visible; border-radius: 0;
-  background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
-  opacity: 1; visibility: visible; transform: none; transition: none; z-index: 1;
-}
-.uai--room .uai-head { display: none; }
+    { id: 'boss', t: T('Boss Battle', 'Boss Battle', 'Boss Battle', 'Boss Battle'),
+      k: ['boss battle', 'boss', 'bosses', 'final boss', 'stages', 'patron', 'boss savasi', 'savas', 'bosskampf', 'endgegner'],
+      a: T('👾 **Boss Battle**: survive **three stages** and defeat the final boss. It takes about **5 minutes** and pays **+180 XP**. It also has a **trailer** in Watch (“Boss Battle: new mode reveal”), and Uzio AI can **generate a custom boss** with escalating rules.',
+           '👾 **Boss Battle**: **üç aşamadan** sağ çık ve son boss’u yen. Yaklaşık **5 dakika** sürer ve **+180 XP** verir. İzle sekmesinde bir **fragmanı** var (“Boss Battle: new mode reveal”); Uzio AI de zorluğu giderek artan **özel bir boss** üretebilir.',
+           '👾 **Boss Battle** : survis à **trois étapes** et bats le boss final. Compte environ **5 minutes** et **+180 XP**. Il a une **bande-annonce** dans Regarder, et Uzio AI peut **générer un boss sur mesure** aux règles croissantes.',
+           '👾 **Boss Battle**: Überlebe **drei Stufen** und besiege den Endboss. Dauer etwa **5 Minuten**, Belohnung **+180 XP**. Es gibt einen **Trailer** bei Ansehen, und Uzio AI kann einen **eigenen Boss** mit steigenden Regeln erzeugen.'),
+      go: ['play', 'watch'], rel: ['uzioai', 'xp', 'modes'] },
 
-/* history pop-up: same glass as the top bar, opens above the input */
-.uai--room .uai-log {
-  position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); flex: none; max-height: min(42dvh, 340px); padding: 12px; gap: 6px; border-radius: 26px;
-  background: color-mix(in srgb, var(--card, #fff) 66%, transparent); -webkit-backdrop-filter: blur(30px) saturate(1.9); backdrop-filter: blur(30px) saturate(1.9);
-  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .75)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12));
-  scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--fg, #000) 22%, transparent) transparent;
-  opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(10px) scale(.97); transform-origin: 50% 100%;
-  transition: opacity .2s ease, transform .4s cubic-bezier(.32, 1.25, .45, 1), visibility 0s linear .4s;
-}
-.uai--room.hist-open .uai-log { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition-delay: 0s; }
-.uai--room .uai-msg { max-width: 92%; padding: 7px 12px; border-radius: 16px; font-size: 14px; line-height: 1.38; }
-.uai--room .uai-bot { border-bottom-left-radius: 5px; }
-.uai--room .uai-me { border-bottom-right-radius: 5px; }
-.uai--room .uai-extra { margin-top: 8px; }
-.uai--room .uai-go { padding: 6px 12px; font-size: 13px; }
+    { id: 'puzzle', t: T('Puzzle Drop', 'Puzzle Drop', 'Puzzle Drop', 'Puzzle Drop'),
+      k: ['puzzle drop', 'puzzle', 'puzzles', 'logic', 'clues', 'hints', 'bulmaca', 'mantik', 'ipucu', 'enigme', 'indices', 'logique', 'ratsel', 'hinweise', 'logik'],
+      a: T('🧩 **Puzzle Drop**: solve a chain of clues. The fewer hints you use, the more points you earn. About **3 minutes**, category: **Logic**.',
+           '🧩 **Puzzle Drop**: bir ipucu zincirini çöz. Ne kadar az ipucu kullanırsan o kadar çok puan alırsın. Yaklaşık **3 dakika**, kategori: **Mantık**.',
+           '🧩 **Puzzle Drop** : résous une chaîne d’indices. Moins tu utilises d’aides, plus tu marques de points. Environ **3 minutes**, catégorie **Logique**.',
+           '🧩 **Puzzle Drop**: Löse eine Kette von Hinweisen. Je weniger Tipps du nutzt, desto mehr Punkte gibt es. Etwa **3 Minuten**, Kategorie **Logik**.'),
+      go: ['play'], rel: ['modes', 'perfect', 'uzioai'] },
 
-.uai--room .uai-chips { justify-content: safe center; padding: 0 2px 10px; gap: 6px; }
-.uai--room .uai-chip { padding: 6px 12px; font-size: 13px; }
+    { id: 'perfect', t: T('Perfect Run', 'Perfect Run', 'Perfect Run', 'Perfect Run'),
+      k: ['perfect run', 'perfect', 'one mistake', 'multiplier', 'mukemmel', 'kusursuz', 'carpan', 'parfait', 'multiplicateur', 'perfekt', 'multiplikator'],
+      a: T('🎯 **Perfect Run** is the hard one: a single mistake resets your multiplier. How far can you go? It’s labelled **Hard** with a **Combo** focus. A **Combo Saver** perk (160 coins) lets you keep the multiplier after one mistake.',
+           '🎯 **Perfect Run** zor olanı: tek bir hata çarpanını sıfırlar. Ne kadar ileri gidebilirsin? **Zor** etiketli ve **Kombo** odaklı. **Combo Saver** avantajı (160 jeton) bir hatadan sonra çarpanını korumana izin verir.',
+           '🎯 **Perfect Run** est le mode difficile : une seule erreur remet ton multiplicateur à zéro. Jusqu’où iras-tu ? Étiquette **Difficile**, focus **Combo**. Le perk **Combo Saver** (160 pièces) garde le multiplicateur après une erreur.',
+           '🎯 **Perfect Run** ist der harte Modus: Ein einziger Fehler setzt deinen Multiplikator zurück. Wie weit kommst du? Label **Hard**, Fokus **Combo**. Der **Combo Saver** (160 Münzen) rettet den Multiplikator nach einem Fehler.'),
+      go: ['play', 'perks'], rel: ['combo', 'shop', 'rapid'] },
 
-.uai--room .uai-form { padding: 0; gap: 10px; align-items: center; }
-/* history button + input bar + mic + send: all the same liquid glass as the search button */
-.uai--room .uai-hist, .uai--room .uai-field { background: var(--glass, rgba(255, 255, 255, .58)); -webkit-backdrop-filter: blur(30px) saturate(1.9); backdrop-filter: blur(30px) saturate(1.9);
-  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .75)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)), inset 0 -1px 0 rgba(255, 255, 255, .08), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12)); }
-.uai--room .uai-hist {
-  flex: none; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; display: grid; place-items: center; color: var(--fg, #000);
-  transition: transform .4s cubic-bezier(.32, 1.25, .45, 1), color .2s;
-}
-.uai--room .uai-hist:hover { transform: scale(1.07); }
-.uai--room .uai-hist:active { transform: scale(.92); }
-.uai--room .uai-hist[aria-expanded="true"] { color: var(--uai-accent); }
-.uai-hist svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-.uai--room .uai-field {
-  flex: 1; min-width: 0; height: 48px; display: flex; align-items: center; gap: 4px; padding: 0 5px 0 6px; border-radius: 999px;
-  transition: transform .35s cubic-bezier(.32, 1.25, .45, 1), box-shadow .3s ease;
-}
-.uai--room .uai-field:focus-within {
-  transform: scale(1.015);
-  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .75)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .9)), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12)), 0 8px 28px color-mix(in srgb, var(--uai-accent) 22%, transparent);
-}
-.uai--room .uai-input { flex: 1; height: 100%; padding: 0 12px; background: transparent; border-radius: 0; font-size: 15px; font-weight: 600; box-shadow: none; }
-.uai--room .uai-input:focus { box-shadow: none; }
-.uai--room.uai-listening .uai-field { box-shadow: inset 0 0 0 1.5px rgba(255, 59, 48, .5), var(--glass-shadow, 0 10px 34px rgba(30, 30, 60, .12)); }
-.uai--room .uai-mic, .uai--room .uai-send {
-  width: 38px; height: 38px; background: color-mix(in srgb, var(--fg, #000) 7%, transparent); color: var(--fg, #000);
-  box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .6)), inset 0 1px 0 var(--spec, rgba(255, 255, 255, .7));
-}
-.uai--room .uai-send { color: var(--uai-accent); background: color-mix(in srgb, var(--uai-accent) 16%, transparent); }
-.uai--room .uai-send:disabled { color: var(--fg2, rgba(60, 60, 67, .5)); background: color-mix(in srgb, var(--fg, #000) 7%, transparent); opacity: .6; }
-.uai--room .uai-mic.on, .uai--room .uai-mic.on:hover:not(:disabled) { color: #fff; background: #ff3b30; box-shadow: none; }
-.uai--room .uai-mic svg { width: 19px; height: 19px; }
-.uai--room .uai-send svg { width: 18px; height: 18px; }
+    { id: 'beatuzio', t: T('Beat Uzio', 'Beat Uzio', 'Beat Uzio', 'Beat Uzio'),
+      k: ['beat uzio', 'duel', 'race', 'ai duel', 'versus', 'vs', 'head to head', 'steal', 'multiplayer', 'friend', 'friends', 'pvp', 'dugello', 'yaris', 'arkadas', 'duel', 'course', 'ami', 'amis', 'copain', 'duell', 'rennen', 'freund', 'freunde'],
+      a: T('🏁 **Beat Uzio** is an **AI duel**: race Uzio to the answer and steal the bonus. It takes about **2 minutes**. For playing against people: Play describes **multiplayer-style missions**, and one of the Uzio AI quick prompts is “Make a head-to-head challenge I can play with a friend.” Right now that’s a preview rather than live matchmaking.',
+           '🏁 **Beat Uzio** bir **yapay zekâ düellosu**: cevaba Uzio’dan önce ulaş ve bonusu çal. Yaklaşık **2 dakika** sürer. İnsanlarla oynamak için: Oyna sekmesi **çok oyunculu tarzda görevlerden** söz eder, Uzio AI hızlı komutlarından biri “Arkadaşımla oynayabileceğim bir kafa kafaya meydan okuma yap” der. Şu an bu canlı eşleşme değil, bir önizleme.',
+           '🏁 **Beat Uzio** est un **duel contre l’IA** : arrive avant Uzio à la réponse et vole le bonus. Environ **2 minutes**. Pour jouer contre des humains : Jouer parle de **missions de style multijoueur** et un des prompts d’Uzio AI propose un défi en tête-à-tête avec un ami. Pour l’instant, c’est un aperçu, pas du matchmaking en direct.',
+           '🏁 **Beat Uzio** ist ein **KI-Duell**: Sei vor Uzio bei der Antwort und stiehl den Bonus. Dauer etwa **2 Minuten**. Gegen Menschen: Spielen erwähnt **Multiplayer-Missionen**, und einer der Uzio-AI-Prompts lautet „Mach eine Head-to-Head-Challenge für mich und einen Freund“. Aktuell ist das eine Vorschau, kein Live-Matchmaking.'),
+      go: ['play'], rel: ['modes', 'uzioai', 'rapid'] },
 
-@keyframes roomBreath { 0%, 100% { opacity: .75; transform: translate(-50%, -50%) scale(.96); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } }
-@keyframes roomListen { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.9); } 100% { opacity: .5; transform: translate(-50%, -50%) scale(1.25); } }
+    { id: 'risk', t: T('Risk It', 'Risk It', 'Risk It', 'Risk It'),
+      k: ['risk it', 'risk', 'gamble', 'high stakes', 'safer reward', 'bet', 'risk', 'kumar', 'riziko', 'yuksek risk', 'risque', 'gros enjeux', 'parier', 'risiko', 'wetten', 'hohes risiko'],
+      a: T('💥 **Risk It** is the high-stakes mode: choose the **safer reward** or **gamble your points** for more. It plays with **coins** as the prize.',
+           '💥 **Risk It** yüksek riskli mod: **güvenli ödülü** seç ya da daha fazlası için **puanlarını riske at**. Ödül olarak **jeton** kazandırır.',
+           '💥 **Risk It** est le mode à gros enjeux : choisis la **récompense sûre** ou **mise tes points** pour plus. Il rapporte des **pièces**.',
+           '💥 **Risk It** ist der High-Stakes-Modus: Wähle die **sichere Belohnung** oder **setze deine Punkte** für mehr aufs Spiel. Der Preis sind **Münzen**.'),
+      go: ['play'], rel: ['coins', 'perfect', 'modes'] },
 
-@media (prefers-reduced-motion: reduce) {
-  .room, .room-glow, .room-orb .orb-body { animation: none; }
-}
-.uai--room .uai-input:focus-visible { outline: none; }
+    { id: 'questrun', t: T('Quest Run', 'Quest Run', 'Quest Run', 'Quest Run'),
+      k: ['quest run', 'adventure', 'map', 'chest', 'connected', 'macera', 'harita', 'sandik', 'aventure', 'carte', 'coffre', 'abenteuer', 'karte', 'truhe'],
+      a: T('🗺️ **Quest Run**: clear connected mini-games to reach the final chest. It takes **6–8 minutes**, the longest mode, with an **Adventure** feel. There’s a Watch video previewing the new Quest Run map, and Uzio AI can **build a quest** from several games.',
+           '🗺️ **Quest Run**: bağlantılı mini oyunları bitirip son sandığa ulaş. **6–8 dakika** süren en uzun mod, **Macera** havasında. İzle sekmesinde yeni Quest Run haritasını gösteren bir video var; Uzio AI de birkaç oyundan **bir görev zinciri kurabilir**.',
+           '🗺️ **Quest Run** : enchaîne des mini-jeux reliés jusqu’au coffre final. **6–8 minutes**, le mode le plus long, ambiance **Aventure**. Une vidéo dans Regarder présente la nouvelle carte, et Uzio AI peut **construire une quête**.',
+           '🗺️ **Quest Run**: Meistere verbundene Minispiele bis zur finalen Truhe. **6–8 Minuten**, der längste Modus, mit **Abenteuer**-Gefühl. Bei Ansehen gibt es ein Video zur neuen Karte, und Uzio AI kann eine **Quest bauen**.'),
+      go: ['play', 'watch'], rel: ['modes', 'uzioai', 'videos'] },
 
-/* ======================================================================
-   Room layout: glass chat on the left, Uzio as a companion on the right.
-   The "body" prefix and !important keep other stylesheets from undoing it.
-   ====================================================================== */
-body .room {
-  --orb-max: 560px; /* Uzio's size: lower = smaller */
-  display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
-  gap: 24px; width: 100%; max-width: 1280px; margin-inline: auto; padding: 8px 20px 4px; box-sizing: border-box;
-}
-body .room .room-chat { grid-area: 1 / 1; width: 100%; height: 100%; min-height: 0; }
-body .room .room-stage { grid-area: 1 / 2; width: 100%; height: 100%; min-height: 0; }
-body .room .room-stage .room-orb { left: 50% !important; width: min(100cqw, 100cqh, var(--orb-max)) !important; height: auto !important; aspect-ratio: 1; }
-body .room .room-stage .room-glow { left: 50%; width: min(100cqw, 100cqh, var(--orb-max)); }
+    { id: 'surprise', t: T('Surprise Me', 'Surprise Me', 'Surprise Me', 'Surprise Me'),
+      k: ['surprise me', 'surprise', 'random', 'randomize', 'sasirt', 'rastgele', 'surprends', 'aleatoire', 'uberrasch', 'zufall', 'zufallig'],
+      a: T('🎲 **Surprise Me**: no choosing, Uzio picks the **mode, rule and difficulty** for you. It’s random and comes with **bonus XP**.',
+           '🎲 **Surprise Me**: seçim yok, **modu, kuralı ve zorluğu** Uzio belirler. Rastgele ve **bonus XP** içerir.',
+           '🎲 **Surprise Me** : pas de choix, Uzio sélectionne le **mode, la règle et la difficulté**. Aléatoire, avec des **XP bonus**.',
+           '🎲 **Surprise Me**: Keine Auswahl, Uzio bestimmt **Modus, Regel und Schwierigkeit**. Zufällig und mit **Bonus-XP**.'),
+      go: ['play'], rel: ['modes', 'challenge', 'boss'] },
 
-/* the glass sheet */
-body .room .uai.uai--room {
-  display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; box-sizing: border-box; overflow: hidden; border-radius: 32px;
-  background: linear-gradient(155deg, color-mix(in srgb, var(--card, #fff) 62%, transparent), color-mix(in srgb, var(--card, #fff) 34%, transparent));
-  -webkit-backdrop-filter: blur(40px) saturate(1.8); backdrop-filter: blur(40px) saturate(1.8);
-  box-shadow: inset 0 0 0 1px var(--glass-edge, rgba(255, 255, 255, .22)), inset 0 1.5px 0 var(--spec, rgba(255, 255, 255, .35)), 0 24px 60px rgba(0, 0, 0, .22);
-}
+    /* ---------- watch ---------- */
+    { id: 'videos', t: T('Watch videos', 'İzle videoları', 'Vidéos', 'Videos'),
+      k: ['watch', 'video', 'videos', 'clips', 'clip', 'trailer', 'trailers', 'drops', 'strategy drop', 'quick tip', 'preview', 'uzio lab', 'reward drop', 'new', 'izle', 'fragman', 'klip', 'regarder', 'vidos', 'bande annonce', 'ansehen', 'anschauen', 'trailer'],
+      a: T('**Watch** has 6 drops:\n🏆 How top players protect a streak (Strategy Drop · 2:10)\n👾 Boss Battle: new mode reveal (Mode Trailer · 1:35) **NEW**\n⚡ 3 tricks for a higher combo (Quick Tip · 2:20) **NEW**\n🎁 Mystery Perks explained (Reward Drop · 2:05)\n🗺️ Inside the new Quest Run map (Preview · 3:15)\n🤖 Uzio AI creates an impossible challenge (Uzio Lab · 2:50)\nSome clips unlock quests, boosts or secret game modes, and you can ⭐ save videos for later.',
+           '**İzle** sekmesinde 6 video var:\n🏆 How top players protect a streak (Strateji · 2:10)\n👾 Boss Battle: new mode reveal (Mod fragmanı · 1:35) **YENİ**\n⚡ 3 tricks for a higher combo (Hızlı ipucu · 2:20) **YENİ**\n🎁 Mystery Perks explained (Ödül · 2:05)\n🗺️ Inside the new Quest Run map (Önizleme · 3:15)\n🤖 Uzio AI creates an impossible challenge (Uzio Lab · 2:50)\nBazı klipler görev, boost veya gizli modların kilidini açar; videoları ⭐ ile sonrası için kaydedebilirsin.',
+           '**Regarder** propose 6 vidéos :\n🏆 How top players protect a streak (Strategy Drop · 2:10)\n👾 Boss Battle: new mode reveal (Bande-annonce · 1:35) **NEW**\n⚡ 3 tricks for a higher combo (Astuce · 2:20) **NEW**\n🎁 Mystery Perks explained (Reward Drop · 2:05)\n🗺️ Inside the new Quest Run map (Aperçu · 3:15)\n🤖 Uzio AI creates an impossible challenge (Uzio Lab · 2:50)\nCertains clips débloquent des quêtes, boosts ou modes secrets, et tu peux ⭐ les sauvegarder.',
+           '**Ansehen** hat 6 Drops:\n🏆 How top players protect a streak (Strategy Drop · 2:10)\n👾 Boss Battle: new mode reveal (Mode-Trailer · 1:35) **NEU**\n⚡ 3 tricks for a higher combo (Quick Tip · 2:20) **NEU**\n🎁 Mystery Perks explained (Reward Drop · 2:05)\n🗺️ Inside the new Quest Run map (Vorschau · 3:15)\n🤖 Uzio AI creates an impossible challenge (Uzio Lab · 2:50)\nManche Clips schalten Quests, Boosts oder Geheimmodi frei; Videos kannst du mit ⭐ speichern.'),
+      go: ['watch'], rel: ['boss', 'questrun', 'shop'] },
 
-/* history is always visible inside the sheet */
-body .room .uai--room .uai-log {
-  position: static; flex: 1; min-height: 0; max-height: none; padding: 20px 18px 12px; gap: 10px;
-  background: none; box-shadow: none; border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none;
-  opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition: none;
-}
-body .room .uai--room .uai-msg { flex-shrink: 0; max-width: 85%; padding: 10px 14px; border-radius: 20px; font-size: 15px; line-height: 1.45; }
-body .room .uai--room .uai-bot { border-bottom-left-radius: 7px; background: color-mix(in srgb, var(--fg, #000) 8%, transparent); box-shadow: inset 0 0 0 .5px var(--glass-edge, rgba(255, 255, 255, .25)); }
-body .room .uai--room .uai-me { border-bottom-right-radius: 7px; }
+    /* ---------- perks, status, money ---------- */
+    { id: 'perks', t: T('Perks', 'Avantajlar', 'Avantages', 'Extras'),
+      k: ['perks', 'perk', 'rewards', 'reward', 'collection', 'status', 'cosmetic', 'cosmetics', 'collectibles', 'avantaj', 'avantajlar', 'odul', 'oduller', 'koleksiyon', 'avantages', 'recompense', 'recompenses', 'belohnung', 'belohnungen', 'extras', 'sammlung'],
+      a: T('**Perks** is where your progress lives: **Player status** (2,340 XP, level ring), your **Wallet** (640 coins, 4-day streak, 12 badges, 3 rare items), the **Perk shop** (5 boosts, rotating regularly) and your **Next unlock** (Mystery Profile Aura at Level 8).',
+           '**Avantajlar** ilerlemenin yaşadığı yer: **Oyuncu durumu** (2.340 XP, seviye halkası), **Cüzdan** (640 jeton, 4 günlük seri, 12 rozet, 3 nadir eşya), **Avantaj mağazası** (düzenli yenilenen 5 boost) ve **Sıradaki kilit** (8. seviyede Mystery Profile Aura).',
+           '**Avantages** est le centre de ta progression : **Statut du joueur** (2 340 XP, anneau de niveau), ton **Portefeuille** (640 pièces, série de 4 jours, 12 badges, 3 objets rares), la **boutique** (5 boosts, renouvelée régulièrement) et ton **prochain déblocage** (Mystery Profile Aura au niveau 8).',
+           '**Extras** ist dein Fortschritts-Zentrum: **Spielerstatus** (2.340 XP, Level-Ring), dein **Wallet** (640 Münzen, 4-Tage-Serie, 12 Badges, 3 seltene Items), der **Perk-Shop** (5 Boosts, regelmäßig wechselnd) und dein **nächster Unlock** (Mystery Profile Aura auf Level 8).'),
+      go: ['perks'], rel: ['shop', 'xp', 'coins'] },
 
-/* no starter cards, and no history button since the chat is already open */
-body .room .uai--room .uai-chips, body .room .uai--room .uai-hist { display: none; }
-body .room .uai--room .uai-form { padding: 10px 14px 14px; }
+    { id: 'shop', t: T('Perk shop & prices', 'Mağaza ve fiyatlar', 'Boutique et prix', 'Shop & Preise'),
+      k: ['shop', 'store', 'buy', 'purchase', 'price', 'prices', 'cost', 'how much', 'streak shield', 'shield', 'xp booster', 'booster', 'coute', 'kostet', 'reroll', 'reroll token', 'rare drop', 'combo saver', 'boost', 'boosts', 'magaza', 'satin al', 'fiyat', 'fiyatlar', 'ne kadar', 'kac jeton', 'boutique', 'acheter', 'prix', 'combien', 'kaufen', 'preis', 'preise', 'wie viel', 'kosten'],
+      a: T('The **Perk shop** sells 5 items:\n🛡️ **Streak Shield** · 120 coins (protect one missed day)\n⚡ **XP Booster** · 180 coins (2× XP for 20 minutes)\n🎲 **Reroll Token** · 90 coins (swap one daily quest)\n💎 **Rare Drop** · 250 coins (random premium cosmetic)\n🔥 **Combo Saver** · 160 coins (keep your multiplier after one mistake)\nStock rotates regularly. You currently have 🪙 **640 coins**.',
+           '**Avantaj mağazasında** 5 ürün var:\n🛡️ **Streak Shield** · 120 jeton (kaçırılan bir günü korur)\n⚡ **XP Booster** · 180 jeton (20 dk boyunca 2× XP)\n🎲 **Reroll Token** · 90 jeton (bir günlük görevi değiştirir)\n💎 **Rare Drop** · 250 jeton (rastgele premium kozmetik)\n🔥 **Combo Saver** · 160 jeton (bir hatadan sonra çarpanı korur)\nStok düzenli yenilenir. Şu an 🪙 **640 jetonun** var.',
+           'La **boutique** vend 5 objets :\n🛡️ **Streak Shield** · 120 pièces (protège un jour manqué)\n⚡ **XP Booster** · 180 pièces (XP ×2 pendant 20 min)\n🎲 **Reroll Token** · 90 pièces (change une quête)\n💎 **Rare Drop** · 250 pièces (cosmétique premium aléatoire)\n🔥 **Combo Saver** · 160 pièces (garde le multiplicateur après une erreur)\nLe stock tourne régulièrement. Tu as 🪙 **640 pièces**.',
+           'Der **Perk-Shop** verkauft 5 Items:\n🛡️ **Streak Shield** · 120 Münzen (schützt einen verpassten Tag)\n⚡ **XP Booster** · 180 Münzen (2× XP für 20 Minuten)\n🎲 **Reroll Token** · 90 Münzen (tauscht eine Tagesquest)\n💎 **Rare Drop** · 250 Münzen (zufälliges Premium-Cosmetic)\n🔥 **Combo Saver** · 160 Münzen (Multiplikator nach einem Fehler behalten)\nDas Angebot wechselt regelmäßig. Du hast aktuell 🪙 **640 Münzen**.'),
+      go: ['perks'], rel: ['coins', 'streak', 'xp'] },
 
-/* phones and narrow windows: Uzio on top, chat below */
-@media (max-width: 899px) {
-  body .room { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 28%) minmax(0, 1fr); gap: 8px; padding: 0 10px 4px; }
-  body .room .room-stage { grid-area: 1 / 1; }
-  body .room .room-chat { grid-area: 2 / 1; }
-}
+    { id: 'coins', t: T('Coins & wallet', 'Jeton ve cüzdan', 'Pièces et portefeuille', 'Münzen & Wallet'),
+      k: ['coin', 'coins', 'wallet', 'money', 'currency', 'earn coins', 'spend', 'balance', 'jeton', 'jetonlar', 'cuzdan', 'para', 'bakiye', 'pieces', 'piece', 'portefeuille', 'argent', 'munzen', 'munze', 'geld'],
+      a: T('🪙 **Coins** are the in-game currency. You have **640 coins** in your **Wallet**. Earn them from **quests, high scores, streak milestones and special events**, and spend them in the Perk shop (items cost 90–250 coins). **Risk It** also pays in coins.',
+           '🪙 **Jetonlar** oyun içi para birimi. **Cüzdanında 640 jeton** var. **Görevlerden, yüksek skorlardan, seri kilometre taşlarından ve özel etkinliklerden** kazanır, Avantaj mağazasında harcarsın (ürünler 90–250 jeton). **Risk It** de jetonla ödüllendirir.',
+           '🪙 Les **pièces** sont la monnaie du jeu. Tu as **640 pièces** dans ton **Portefeuille**. Gagne-les via les **quêtes, hauts scores, paliers de série et événements**, et dépense-les dans la boutique (90–250 pièces). **Risk It** paie aussi en pièces.',
+           '🪙 **Münzen** sind die Spielwährung. In deinem **Wallet** liegen **640 Münzen**. Du verdienst sie durch **Quests, Highscores, Serien-Meilensteine und Events** und gibst sie im Perk-Shop aus (90–250 Münzen). **Risk It** zahlt ebenfalls in Münzen.'),
+      go: ['perks'], rel: ['shop', 'quests', 'risk'] },
 
-/* ---------- fill the whole screen ---------- */
-/* widen every wrapper around the room (they were squeezing it into a narrow column) */
-body :has(.room) { max-width: none !important; width: 100% !important; margin-inline: 0 !important; padding-inline: 0 !important; box-sizing: border-box; }
-body .room {
-  /* and span the full window even if a wrapper still holds it back */
-  position: relative; left: 50%; align-self: flex-start; flex-shrink: 0;
-  width: 100vw !important; max-width: none !important; margin: 0 0 0 -50vw !important;
-  grid-template-columns: minmax(0, 1.52fr) minmax(0, 1fr); gap: 24px; padding: 8px 24px 4px;
-}
-body .room .room-stage .room-orb,
-body .room .room-stage .room-glow { width: min(96cqw, 100cqh) !important; }
-body .room .uai--room .uai-msg { max-width: min(75%, 640px); font-size: 16px; }
-@media (max-width: 899px) {
-  body .room { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 0 10px 4px; }
-}
+    { id: 'xp', t: T('XP & levels', 'XP ve seviyeler', 'XP et niveaux', 'XP & Level'),
+      k: ['xp', 'level', 'levels', 'level up', 'experience', 'progress', 'explorer', 'level 7', 'level 8', 'earn xp', 'next unlock', 'mystery profile aura', 'aura', 'seviye', 'seviyeler', 'deneyim', 'ilerleme', 'kasif', 'niveau', 'niveaux', 'progression', 'explorateur', 'stufe', 'fortschritt', 'entdecker'],
+      w: 1.1,
+      a: T('You’re **Level 7 · Explorer** with **2,340 XP**. You need **660 XP** to reach **Level 8** (the ring shows 78%), which unlocks the **Mystery Profile Aura**, a cosmetic reward. Earn XP from every game (Boss Battle pays **+180**), from the Neon Vault mission (**+120**), from quests, and faster with **Double XP Hour** or an **XP Booster**.',
+           '**7. Seviye · Kâşif**’sin ve **2.340 XP**’n var. **8. seviyeye** **660 XP** kaldı (halka %78’i gösteriyor); bu seviye **Mystery Profile Aura** kozmetik ödülünü açar. XP’yi her oyundan (Boss Battle **+180**), Neon Vault görevinden (**+120**), görevlerden ve **Çift XP Saati** veya **XP Booster** ile daha hızlı kazanırsın.',
+           'Tu es **niveau 7 · Explorateur** avec **2 340 XP**. Il te faut **660 XP** pour le **niveau 8** (l’anneau indique 78 %), qui débloque l’**aura de profil mystère**, une récompense cosmétique. Gagne des XP à chaque jeu (Boss Battle **+180**), via Neon Vault (**+120**), les quêtes, et plus vite avec l’**Heure XP double** ou un **XP Booster**.',
+           'Du bist **Level 7 · Explorer** mit **2.340 XP**. Bis **Level 8** fehlen **660 XP** (der Ring zeigt 78 %), das die **Mystery Profile Aura** freischaltet, eine kosmetische Belohnung. XP gibt es für jedes Spiel (Boss Battle **+180**), für Neon Vault (**+120**), Quests und schneller mit der **Double-XP-Stunde** oder einem **XP Booster**.'),
+      go: ['perks'], rel: ['boost', 'event', 'shop'] },
 
-/* ======================================================================
-   Uzio's extra moves. They use translate / rotate / scale, so they stack on top of the float.
-   ====================================================================== */
-body .room .room-orb .orb-body {
-  transform-origin: 50% 80%;
-  transition: translate .6s cubic-bezier(.32, 1.4, .45, 1), rotate .6s cubic-bezier(.32, 1.4, .45, 1);
-}
+    { id: 'boost', t: T('Boosts & perks', 'Boost\'lar', 'Boosts', 'Boosts'),
+      k: ['boost', 'boosts', 'double xp booster', 'multiplier boost', 'power up', 'powerup'],
+      w: 0.6,
+      a: T('Boosts live in the **Perk shop**: **XP Booster** (2× XP for 20 min, 180 coins), **Streak Shield** (120), **Combo Saver** (160) and **Reroll Token** (90). For free double XP, watch for the **Double XP Hour** event on Home.',
+           'Boost’lar **Avantaj mağazasında**: **XP Booster** (20 dk 2× XP, 180 jeton), **Streak Shield** (120), **Combo Saver** (160) ve **Reroll Token** (90). Bedava çift XP için Ana Sayfa’daki **Çift XP Saati** etkinliğini kaçırma.',
+           'Les boosts sont dans la **boutique** : **XP Booster** (XP ×2 pendant 20 min, 180 pièces), **Streak Shield** (120), **Combo Saver** (160) et **Reroll Token** (90). Pour du double XP gratuit, guette l’**Heure XP double** sur Accueil.',
+           'Boosts gibt es im **Perk-Shop**: **XP Booster** (2× XP für 20 Min., 180 Münzen), **Streak Shield** (120), **Combo Saver** (160) und **Reroll Token** (90). Kostenlose doppelte XP gibt es beim Event **Double-XP-Stunde** auf Start.'),
+      go: ['perks'], rel: ['shop', 'event', 'xp'] },
 
-/* peek: leans toward the chat while you type */
-body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: -9deg; translate: -6% 2%; }
+    { id: 'streak', t: T('Streaks', 'Seriler', 'Séries', 'Serien'),
+      k: ['streak', 'streaks', 'protect streak', 'days in a row', 'seri', 'seriler', 'seriyi', 'gun', 'serie', 'series', 'jours', 'serie halten', 'tage'],
+      a: T('🔥 You’re on a **4-day streak**. Keep it going by playing every day; streak milestones even pay out coins. A **Streak Shield** (120 coins) protects one missed day, and the Watch tab has a video called “How top players protect a streak”.',
+           '🔥 **4 günlük bir serin** var. Her gün oynayarak sürdür; seri kilometre taşları jeton bile verir. **Streak Shield** (120 jeton) kaçırılan bir günü korur; İzle sekmesinde “How top players protect a streak” videosu var.',
+           '🔥 Tu es sur une **série de 4 jours**. Joue chaque jour pour la garder ; les paliers rapportent même des pièces. Un **Streak Shield** (120 pièces) protège un jour manqué, et Regarder a la vidéo « How top players protect a streak ».',
+           '🔥 Du hast eine **4-Tage-Serie**. Spiele täglich, um sie zu halten; Serien-Meilensteine zahlen sogar Münzen aus. Ein **Streak Shield** (120 Münzen) schützt einen verpassten Tag, und bei Ansehen gibt es das Video „How top players protect a streak“.'),
+      go: ['perks', 'watch'], rel: ['shop', 'quests', 'videos'] },
 
-/* hop: squash and bounce when a message is sent (.thinking is added at that moment) */
-body .room.thinking .room-orb .orb-body { animation: orbfloat 4.2s ease-in-out infinite, uzioHop .7s cubic-bezier(.3, .7, .4, 1); }
-@keyframes uzioHop {
-  0%, 100% { scale: 1 1; translate: 0 0; }
-  18% { scale: 1.1 .88; translate: 0 3%; }
-  45% { scale: .93 1.08; translate: 0 -9%; }
-  70% { scale: 1.06 .94; translate: 0 1%; }
-  85% { scale: .98 1.02; translate: 0 -1%; }
-}
+    { id: 'combo', t: T('Combos', 'Kombolar', 'Combos', 'Combos'),
+      k: ['combo', 'combos', 'multiplier', 'kombo', 'kombolar', 'carpan', 'combo'],
+      w: 0.9,
+      a: T('A **combo** is a run of consecutive good answers that raises your multiplier. Combos matter in **Rapid Fire**, **Perfect Run** (one mistake resets it) and the quest **Combo Keeper** (reach 5×). The **Combo Saver** perk keeps it alive after one slip, and Watch has “3 tricks for a higher combo”.',
+           '**Kombo**, çarpanını yükselten ardışık doğru cevaplar zinciri. **Rapid Fire**, **Perfect Run** (tek hata sıfırlar) ve **Combo Keeper** görevinde (5×’e ulaş) önemli. **Combo Saver** avantajı bir hatadan sonra onu korur; İzle’de “3 tricks for a higher combo” videosu var.',
+           'Un **combo** est une série de bonnes réponses qui augmente ton multiplicateur. Il compte dans **Rapid Fire**, **Perfect Run** (une erreur le remet à zéro) et la quête **Combo Keeper** (atteindre 5×). Le perk **Combo Saver** le garde après une erreur, et Regarder a « 3 tricks for a higher combo ».',
+           'Eine **Combo** ist eine Serie richtiger Antworten, die deinen Multiplikator erhöht. Sie zählt bei **Rapid Fire**, **Perfect Run** (ein Fehler setzt sie zurück) und der Quest **Combo Keeper** (5× erreichen). Der **Combo Saver** rettet sie nach einem Patzer, und bei Ansehen gibt es „3 tricks for a higher combo“.'),
+      go: ['play'], rel: ['perfect', 'rapid', 'shop'] },
 
-/* thinking orbit: three little lights circle Uzio until the reply is done */
-body .room .room-orb::after {
-  content: ''; position: absolute; inset: 0; z-index: 3; border-radius: 50%; pointer-events: none;
-  background:
-    radial-gradient(circle 1.5cqmin at 50% 6%, #fff 0 35%, #ffd36b 60%, transparent 100%),
-    radial-gradient(circle 1.5cqmin at 88.1% 72%, #fff 0 35%, #ff7ab5 60%, transparent 100%),
-    radial-gradient(circle 1.5cqmin at 11.9% 72%, #fff 0 35%, #6bc8ff 60%, transparent 100%);
-  opacity: 0; scale: .8; transition: opacity .25s ease, scale .4s ease;
-}
-body .room.thinking .room-orb::after { opacity: 1; scale: 1; animation: uzioOrbit 1.6s linear infinite; }
-@keyframes uzioOrbit { to { rotate: 360deg; } }
+    /* ---------- Uzio AI ---------- */
+    { id: 'uzioai', t: T('Uzio AI tab', 'Uzio AI sekmesi', 'Onglet Uzio AI', 'Uzio-AI-Tab'),
+      k: ['uzio ai', 'ai', 'game master', 'remix', 'create a boss', 'build a quest', 'balance it', 'artificial intelligence', 'yapay zeka', 'oyun ustasi', 'ia', 'maitre du jeu', 'intelligence artificielle', 'ki', 'spielleiter', 'kunstliche intelligenz'],
+      a: T('The **Uzio AI** tab is your game master. It can **invent a challenge**, **remix** two modes, set a **handicap**, **create a boss** with escalating rules, **build a quest** from several games, and **balance** a challenge so it feels fair but exciting. There are quick prompts like “Give me a 2-minute challenge with a huge combo bonus”, plus a **Live modifier** card.',
+           '**Uzio AI** sekmesi oyun ustan. **Meydan okuma icat edebilir**, iki modu **birleştirebilir**, **handikap** koyabilir, giderek zorlaşan bir **boss yaratabilir**, birkaç oyundan **görev zinciri kurabilir** ve bir meydan okumayı adil ama heyecanlı olacak şekilde **dengeleyebilir**. “2 dakikalık, dev kombo bonuslu bir meydan okuma ver” gibi hızlı komutlar ve bir **Canlı değiştirici** kartı var.',
+           'L’onglet **Uzio AI** est ton maître du jeu. Il peut **inventer un défi**, **remixer** deux modes, fixer un **handicap**, **créer un boss** aux règles croissantes, **construire une quête** à partir de plusieurs jeux et **équilibrer** un défi. Il y a des prompts rapides comme « Donne-moi un défi de 2 minutes avec un gros bonus de combo » et une carte **Live modifier**.',
+           'Der **Uzio-AI**-Tab ist dein Spielleiter. Er kann **Challenges erfinden**, zwei Modi **remixen**, ein **Handicap** setzen, einen **Boss** mit steigenden Regeln erschaffen, eine **Quest** aus mehreren Spielen **bauen** und Challenges **ausbalancieren**. Es gibt Quick Prompts wie „Gib mir eine 2-Minuten-Challenge mit riesigem Combo-Bonus“ und eine **Live-Modifier**-Karte.'),
+      go: ['uzio-ai'], rel: ['challenge', 'modifier', 'boss'] },
 
-/* when Uzio sits above the chat, it peeks downward instead */
-@media (max-width: 899px) {
-  body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: -4deg; translate: 0 5%; }
-}
-@media (prefers-reduced-motion: reduce) {
-  body .room .room-orb .orb-body, body .room.thinking .room-orb .orb-body, body .room.thinking .room-orb::after { animation: none; transition: none; }
-  body .room:has(.uai-input:focus:not(:placeholder-shown)) .room-orb .orb-body { rotate: none; translate: none; }
-}
+    { id: 'modifier', t: T('Live modifier', 'Canlı değiştirici', 'Live modifier', 'Live-Modifier'),
+      k: ['live modifier', 'modifier', 'difficulty', 'spicy', 'handicap', 'harder', 'easier', 'timer', 'fewer hints', 'faster timer', 'zorluk', 'degistirici', 'aci', 'difficulte', 'epice', 'modificateur', 'schwierigkeit', 'scharf', 'modifikator'],
+      w: 0.9,
+      a: T('The **Live modifier** card on the Uzio AI tab shows **Difficulty: Spicy 🌶️** with three tweaks active: **+25% XP**, **Fewer hints** and a **Faster timer**. Uzio is ready to adjust timers, hints, multipliers and rewards while you play.',
+           'Uzio AI sekmesindeki **Canlı değiştirici** kartı **Zorluk: Acılı 🌶️** gösterir ve üç ayar aktiftir: **+%25 XP**, **Daha az ipucu** ve **Daha hızlı zamanlayıcı**. Uzio, sen oynarken zamanlayıcıları, ipuçlarını, çarpanları ve ödülleri ayarlamaya hazır.',
+           'La carte **Live modifier** de l’onglet Uzio AI affiche **Difficulté : Épicée 🌶️** avec trois réglages actifs : **+25 % XP**, **Moins d’indices** et un **Minuteur plus rapide**. Uzio ajuste minuteurs, indices, multiplicateurs et récompenses pendant que tu joues.',
+           'Die **Live-Modifier**-Karte im Uzio-AI-Tab zeigt **Schwierigkeit: Scharf 🌶️** mit drei aktiven Anpassungen: **+25 % XP**, **Weniger Hinweise** und **Schnellerer Timer**. Uzio passt Timer, Hinweise, Multiplikatoren und Belohnungen an, während du spielst.'),
+      go: ['uzio-ai'], rel: ['uzioai', 'challenge', 'xp'] },
 
-/* ---------- time-of-day moods (data-time is set by the script) ---------- */
-body .room[data-time="morning"] { --room-accent: #ffd24a; }
-body .room[data-time="evening"] { --room-accent: #ff6f61; }
-body .room[data-time="night"] { --room-accent: #6f7cff; }
-body .room .room-orb { transition: filter 1s ease; }
-body .room[data-time="morning"] .room-orb { filter: brightness(1.08) saturate(1.1); }
-body .room[data-time="night"] .room-orb { filter: brightness(.82) saturate(.85); }
-/* night: slow, sleepy breathing. morning: a livelier float */
-body .room[data-time="night"]:not(.thinking) .room-orb .orb-body { animation-duration: 7s; }
-body .room[data-time="night"]:not(.thinking):not(.listening) .room-glow { animation-duration: 7s; }
-body .room[data-time="morning"]:not(.thinking) .room-orb .orb-body { animation-duration: 3.2s; }
+    { id: 'challenge', t: T('Give me a challenge', 'Bana meydan okuma ver', 'Donne-moi un défi', 'Gib mir eine Challenge'),
+      k: ['challenge', 'challenge me', 'give me a challenge', 'generate', 'invent', 'create a challenge', 'make a challenge', 'dare', 'surprise me with', 'meydan okuma', 'meydan oku', 'uret', 'olustur', 'ver bana', 'defi', 'defis', 'genere', 'cree un defi', 'donne moi un defi', 'herausforderung', 'challenge', 'erfinde', 'erzeuge', 'gib mir'],
+      w: 1.15, dynamic: 'challenge', go: ['uzio-ai'], rel: ['uzioai', 'modifier', 'quests'] },
+
+    /* ---------- profile, settings, meta ---------- */
+    { id: 'onboarding', t: T('Welcome & profile', 'Karşılama ve profil', 'Accueil et profil', 'Willkommen & Profil'),
+      k: ['onboarding', 'welcome', 'profile', 'play style', 'casual', 'competitive', 'hardcore', 'interests', 'replay welcome', 'skip', 'karsilama', 'profil', 'oyun tarzi', 'ilgi alanlari', 'accueil', 'profil', 'style de jeu', 'centres d interet', 'willkommen', 'profil', 'spielstil', 'interessen'],
+      a: T('On your first visit Uzio asks three quick things: your **name**, your **play style** (🌱 **Casual** – quick and easy-to-enter, 🚀 **Competitive** – scores, streaks and harder goals, 🏆 **Hardcore** – tough rules, high stakes, rare rewards) and up to **3 interests** (Speed, Puzzles, Competition, Bosses, Quests, Rewards, Streaks, AI, High Scores). Uzio uses them to tailor your picks. You can skip it, and redo it any time via **Replay welcome** in the account menu.',
+           'İlk ziyaretinde Uzio üç şey sorar: **adın**, **oyun tarzın** (🌱 **Rahat** – hızlı ve kolay girişli, 🚀 **Rekabetçi** – skorlar, seriler, zor hedefler, 🏆 **Hardcore** – sert kurallar, yüksek risk, nadir ödüller) ve en fazla **3 ilgi alanı** (Speed, Puzzles, Competition, Bosses, Quests, Rewards, Streaks, AI, High Scores). Uzio önerilerini buna göre kurar. Atlayabilir ve hesap menüsündeki **Karşılama ekranını yeniden göster** ile istediğin zaman tekrarlayabilirsin.',
+           'À ta première visite, Uzio te pose trois questions : ton **prénom**, ton **style de jeu** (🌱 **Décontracté**, 🚀 **Compétitif**, 🏆 **Hardcore**) et jusqu’à **3 centres d’intérêt** (Speed, Puzzles, Competition, Bosses, Quests, Rewards, Streaks, AI, High Scores). Il adapte ses suggestions. Tu peux passer, et refaire cela via **Revoir l’accueil** dans le menu du compte.',
+           'Beim ersten Besuch fragt Uzio drei Dinge: deinen **Namen**, deinen **Spielstil** (🌱 **Entspannt**, 🚀 **Kompetitiv**, 🏆 **Hardcore**) und bis zu **3 Interessen** (Speed, Puzzles, Competition, Bosses, Quests, Rewards, Streaks, AI, High Scores). Damit passt Uzio seine Vorschläge an. Du kannst überspringen und es jederzeit über **Begrüßung wiederholen** im Kontomenü wiederholen.'),
+      go: ['home'], rel: ['me', 'menu', 'privacy'] },
+
+    { id: 'me', t: T('About me', 'Benim bilgilerim', 'Mon profil', 'Mein Profil'),
+      k: ['my name', 'who am i', 'my profile', 'my level', 'my stats', 'my xp', 'about me', 'what do you know about me', 'do you know me', 'my streak', 'my coins', 'adim ne', 'ben kimim', 'benim', 'seviyem', 'istatistik', 'mon nom', 'qui suis je', 'mon niveau', 'mes stats', 'mein name', 'wer bin ich', 'mein level', 'meine stats'],
+      w: 1.2, dynamic: 'me', go: ['perks'], rel: ['xp', 'onboarding', 'privacy'] },
+
+    { id: 'menu', t: T('Account menu', 'Hesap menüsü', 'Menu du compte', 'Kontomenü'),
+      k: ['account', 'settings', 'my plan', 'plan', 'account menu', 'hamburger', 'menu', 'profile menu', 'hesap', 'ayarlar', 'planim', 'menu', 'compte', 'reglages', 'mon programme', 'konto', 'einstellungen', 'mein plan', 'kontomenu'],
+      a: T('The **account menu** (the ☰ button, top right) shows your avatar, name and level, then **Account**, **Settings** and **My Plan** (those three currently say “coming soon”), **Replay welcome**, the **Language** picker and the **Dark mode** switch.',
+           '**Hesap menüsü** (sağ üstteki ☰ düğmesi) avatarını, adını ve seviyeni; ardından **Hesap**, **Ayarlar** ve **Planım** (bu üçü şu an “yakında” der), **Karşılama ekranını yeniden göster**, **Dil** seçici ve **Karanlık mod** anahtarını gösterir.',
+           'Le **menu du compte** (bouton ☰ en haut à droite) affiche ton avatar, ton nom et ton niveau, puis **Compte**, **Réglages** et **Mon programme** (affichent pour l’instant « bientôt »), **Revoir l’accueil**, le sélecteur de **langue** et le **mode sombre**.',
+           'Das **Kontomenü** (☰ oben rechts) zeigt Avatar, Name und Level, dann **Konto**, **Einstellungen** und **Mein Plan** (diese drei zeigen aktuell „coming soon“), **Begrüßung wiederholen**, die **Sprachauswahl** und den **Dunkelmodus**-Schalter.'),
+      go: ['home'], rel: ['languages', 'theme', 'onboarding'] },
+
+    { id: 'languages', t: T('Languages', 'Diller', 'Langues', 'Sprachen'),
+      k: ['language', 'languages', 'translate', 'english', 'turkish', 'french', 'german', 'turkce', 'francais', 'deutsch', 'dil', 'diller', 'cevir', 'ingilizce', 'turkce', 'fransizca', 'almanca', 'langue', 'langues', 'traduire', 'anglais', 'turc', 'francais', 'allemand', 'sprache', 'sprachen', 'ubersetzen', 'englisch', 'turkisch', 'franzosisch'],
+      a: T('Uzio speaks **4 languages**: 🇬🇧 **English**, 🇹🇷 **Türkçe**, 🇫🇷 **Français** and 🇩🇪 **Deutsch**. Switch in the account menu (Language) on the game hub, or with the **EN** button on the landing page. Your choice is remembered, and I answer in the same language, so you can talk to me in any of the four.',
+           'Uzio **4 dil** konuşur: 🇬🇧 **English**, 🇹🇷 **Türkçe**, 🇫🇷 **Français**, 🇩🇪 **Deutsch**. Oyun merkezinde hesap menüsünden (Dil), açılış sayfasında **EN** düğmesinden değiştir. Seçimin hatırlanır ve ben de aynı dilde cevap veririm; dört dilden birinde yazabilirsin.',
+           'Uzio parle **4 langues** : 🇬🇧 **English**, 🇹🇷 **Türkçe**, 🇫🇷 **Français**, 🇩🇪 **Deutsch**. Change dans le menu du compte (Langue) sur le hub, ou avec le bouton **EN** sur la page d’arrivée. Ton choix est mémorisé et je réponds dans la même langue.',
+           'Uzio spricht **4 Sprachen**: 🇬🇧 **English**, 🇹🇷 **Türkçe**, 🇫🇷 **Français**, 🇩🇪 **Deutsch**. Wechsle im Kontomenü (Sprache) im Hub oder mit dem **EN**-Button auf der Startseite. Deine Wahl wird gespeichert, und ich antworte in derselben Sprache.'),
+      go: ['home'], rel: ['menu', 'theme', 'privacy'] },
+
+    { id: 'theme', t: T('Dark mode', 'Karanlık mod', 'Mode sombre', 'Dunkelmodus'),
+      k: ['dark mode', 'dark', 'light mode', 'light', 'theme', 'night', 'day', 'appearance', 'karanlik', 'karanlik mod', 'tema', 'gece', 'aydinlik', 'sombre', 'theme', 'nuit', 'mode clair', 'dunkel', 'dunkelmodus', 'hell', 'design'],
+      a: T('Use the **Dark mode** switch in the account menu (a little sun/moon toggle), or the **Dark mode** item in the ☰ menu on the landing page. It’s saved in your browser, and if you never choose, Uzio follows your device’s setting.',
+           'Hesap menüsündeki **Karanlık mod** anahtarını (küçük güneş/ay düğmesi) ya da açılış sayfasında ☰ menüsündeki **Karanlık mod**’u kullan. Tarayıcında saklanır; hiç seçmezsen Uzio cihazının ayarını izler.',
+           'Utilise l’interrupteur **Mode sombre** du menu du compte (petit soleil/lune), ou l’entrée **Mode sombre** du menu ☰ sur la page d’arrivée. C’est mémorisé dans ton navigateur, et sans choix, Uzio suit le réglage de ton appareil.',
+           'Nutze den **Dunkelmodus**-Schalter im Kontomenü (kleiner Sonne/Mond-Toggle) oder den Eintrag **Dunkelmodus** im ☰-Menü der Startseite. Er wird im Browser gespeichert; ohne Auswahl folgt Uzio deiner Geräteeinstellung.'),
+      go: ['home'], rel: ['menu', 'languages', 'privacy'] },
+
+    { id: 'search', t: T('Search', 'Arama', 'Recherche', 'Suche'),
+      k: ['search', 'find', 'look for', 'search bar', 'magnifier', 'ara', 'arama', 'bul', 'recherche', 'chercher', 'trouver', 'suche', 'suchen', 'finden'],
+      a: T('The **Search** pill in the top bar looks through the cards on the tab you’re viewing: type a word, press Enter, and the first matching card is scrolled into view and highlighted. If nothing matches you’ll see “No results found”. For anything else, just ask me!',
+           'Üst çubuktaki **Arama** kapsülü, bulunduğun sekmedeki kartlarda arar: bir kelime yaz, Enter’a bas; ilk eşleşen kart görünüme kaydırılır ve vurgulanır. Eşleşme yoksa “Sonuç bulunamadı” görürsün. Başka her şey için bana sorabilirsin!',
+           'La pilule **Recherche** de la barre du haut parcourt les cartes de l’onglet affiché : tape un mot, appuie sur Entrée, et la première carte correspondante est mise en évidence. Sinon tu verras « Aucun résultat ». Pour le reste, demande-moi !',
+           'Die **Suche** in der oberen Leiste durchsucht die Karten des aktuellen Tabs: Wort eintippen, Enter drücken, und die erste passende Karte wird hervorgehoben. Ohne Treffer erscheint „Kein Ergebnis gefunden“. Für alles andere frag mich!'),
+      go: ['home'], rel: ['tabs', 'menu', 'can'] },
+
+    { id: 'orb', t: T('The orb', 'Küre', 'L’orbe', 'Die Kugel'),
+      k: ['orb', 'sphere', 'ball', 'bubble', 'character', 'mascot', 'kure', 'top', 'karakter', 'orbe', 'sphere', 'personnage', 'kugel', 'figur', 'maskottchen'],
+      a: T('That’s me! 🔮 The **orb** is Uzio’s character, a glowing, colour-shifting sphere that floats in the corner and looks around. It’s drawn live with WebGL (no images or libraries). Click it any time to chat with me; on the landing page it’s the big one in the middle.',
+           'O benim! 🔮 **Küre**, Uzio’nun karakteri: köşede süzülen, renk değiştiren, etrafa bakan parlak bir küre. WebGL ile canlı çizilir (resim veya kütüphane yok). İstediğin zaman tıklayıp benimle sohbet et; açılış sayfasında ortadaki büyük küre o.',
+           'C’est moi ! 🔮 L’**orbe** est le personnage d’Uzio, une sphère lumineuse qui change de couleur et flotte dans le coin. Elle est dessinée en direct avec WebGL (sans images ni bibliothèques). Clique dessus pour discuter avec moi ; sur la page d’arrivée, c’est la grande au milieu.',
+           'Das bin ich! 🔮 Die **Kugel** ist Uzios Figur, eine leuchtende, farbwechselnde Sphäre, die in der Ecke schwebt. Sie wird live mit WebGL gezeichnet (keine Bilder, keine Bibliotheken). Klick sie jederzeit an, um mit mir zu chatten; auf der Startseite ist es die große in der Mitte.'),
+      go: ['uzio-ai'], rel: ['about', 'tech', 'can'] },
+
+    { id: 'privacy', t: T('Privacy & saved data', 'Gizlilik ve veriler', 'Confidentialité', 'Datenschutz'),
+      k: ['privacy', 'profile saved', 'where is my data', 'data', 'saved', 'save', 'remember', 'storage', 'cookies', 'localstorage', 'tracking', 'safe', 'gizlilik', 'veri', 'kaydet', 'hatirla', 'cerez', 'guvenli', 'confidentialite', 'donnees', 'sauvegarde', 'cookies', 'datenschutz', 'daten', 'speichern', 'sicher'],
+      a: T('Everything is stored **only in your own browser** (local storage): your name, play style and interests, your language and your light/dark choice. There’s no sign-in and nothing is sent to a server, and that includes this chat: I run entirely in your browser too. The one exception is the 🎤 mic: if you use voice input, your browser’s speech service (Google’s in Chrome, for example) transcribes what you say, and Uzio only receives the text.',
+           'Her şey **yalnızca kendi tarayıcında** (yerel depolama) saklanır: adın, oyun tarzın ve ilgi alanların, dilin ve açık/koyu seçimin. Giriş yok ve hiçbir şey sunucuya gönderilmez; bu sohbet de dahil: ben de tamamen tarayıcında çalışırım. Tek istisna 🎤 mikrofon: sesli giriş kullanırsan tarayıcının konuşma servisi (örneğin Chrome’da Google’ınki) söylediklerini yazıya çevirir; Uzio yalnızca metni alır.',
+           'Tout est stocké **uniquement dans ton navigateur** (stockage local) : ton prénom, ton style de jeu et centres d’intérêt, ta langue et ton choix clair/sombre. Pas de connexion et rien n’est envoyé à un serveur, y compris ce chat : je tourne aussi dans ton navigateur. Seule exception, le micro 🎤 : si tu utilises la saisie vocale, le service vocal de ton navigateur (celui de Google dans Chrome, par exemple) transcrit ta voix, et Uzio ne reçoit que le texte.',
+           'Alles wird **nur in deinem eigenen Browser** (Local Storage) gespeichert: Name, Spielstil und Interessen, Sprache und Hell/Dunkel-Wahl. Es gibt keine Anmeldung und nichts geht an einen Server – auch dieser Chat nicht: Ich laufe komplett in deinem Browser. Die einzige Ausnahme ist das 🎤-Mikrofon: Bei Spracheingabe transkribiert der Sprachdienst deines Browsers (z. B. Googles in Chrome) deine Worte, und Uzio erhält nur den Text.'),
+      go: [], rel: ['onboarding', 'theme', 'languages'] },
+
+    { id: 'demo', t: T('Is it playable yet?', 'Oynanabilir mi?', 'Est-ce jouable ?', 'Schon spielbar?'),
+      k: ['playable', 'real', 'work', 'working', 'coming soon', 'ready to connect', 'demo', 'prototype', 'beta', 'live', 'actually play', 'can i actually', 'oynanabilir', 'gercek', 'yakinda', 'calisiyor mu', 'prototip', 'jouable', 'reel', 'bientot', 'prototype', 'spielbar', 'echt', 'bald', 'funktioniert'],
+      a: T('Honest answer: the site is currently a **front-end preview**. Tabs, search, languages, dark mode, the welcome flow and this chat all work, but the games themselves aren’t wired up yet: tapping a game card shows “activity ready to connect”, and numbers like XP, coins and streak are sample values. Account, Settings and My Plan say “coming soon”.',
+           'Dürüst cevap: site şu an bir **ön yüz önizlemesi**. Sekmeler, arama, diller, karanlık mod, karşılama akışı ve bu sohbet çalışıyor; ama oyunların kendisi henüz bağlı değil: bir oyun kartına dokununca “activity ready to connect” görürsün, XP, jeton ve seri gibi sayılar örnek değerler. Hesap, Ayarlar ve Planım “yakında” der.',
+           'Réponse honnête : le site est pour l’instant un **aperçu front-end**. Onglets, recherche, langues, mode sombre, accueil et ce chat fonctionnent, mais les jeux ne sont pas encore branchés : toucher une carte affiche « activity ready to connect », et XP, pièces et série sont des valeurs d’exemple. Compte, Réglages et Mon programme affichent « bientôt ».',
+           'Ehrliche Antwort: Die Seite ist aktuell eine **Front-End-Vorschau**. Tabs, Suche, Sprachen, Dunkelmodus, der Willkommensablauf und dieser Chat funktionieren, aber die Spiele sind noch nicht angebunden: Ein Tipp auf eine Spielkarte zeigt „activity ready to connect“, und XP, Münzen und Serie sind Beispielwerte. Konto, Einstellungen und Mein Plan zeigen „coming soon“.'),
+      go: [], rel: ['can', 'about', 'tech'] },
+
+    { id: 'pricing', t: T('Pricing & plans', 'Fiyat ve planlar', 'Tarifs', 'Preise & Pläne'),
+      k: ['is it free', 'free', 'pricing', 'subscription', 'premium', 'paid', 'pay', 'sign up', 'sign in', 'login', 'register', 'ucretsiz', 'ucret', 'abonelik', 'uyelik', 'giris', 'kayit', 'gratuit', 'tarif', 'abonnement', 'connexion', 'inscription', 'kostenlos', 'abo', 'anmelden', 'registrieren', 'bezahlen'],
+      w: 0.9,
+      a: T('The site doesn’t list any pricing, subscription or sign-in right now. “My Plan” in the account menu is marked **coming soon**. The only “prices” you’ll find are the in-game **coin** costs in the Perk shop (90–250 coins).',
+           'Site şu an herhangi bir fiyat, abonelik veya giriş sunmuyor. Hesap menüsündeki “Planım” **yakında** olarak işaretli. Bulacağın tek “fiyat”, Avantaj mağazasındaki oyun içi **jeton** bedelleri (90–250 jeton).',
+           'Le site n’affiche pour l’instant ni tarif, ni abonnement, ni connexion. « Mon programme » dans le menu est marqué **bientôt**. Les seuls « prix » sont les coûts en **pièces** de la boutique (90–250 pièces).',
+           'Die Seite zeigt aktuell weder Preise noch Abos oder Anmeldung. „Mein Plan“ im Kontomenü ist als **coming soon** markiert. Die einzigen „Preise“ sind die **Münzen**-Kosten im Perk-Shop (90–250 Münzen).'),
+      go: ['perks'], rel: ['shop', 'menu', 'demo'] },
+
+    { id: 'tech', t: T('How is it built?', 'Nasıl yapıldı?', 'Comment est-ce fait ?', 'Wie ist es gebaut?'),
+      k: ['built', 'website built', 'site built', 'how is it made', 'how was it made', 'made with', 'technology', 'tech', 'stack', 'code', 'html', 'javascript', 'webgl', 'github', 'open source', 'framework', 'library', 'yapildi', 'teknoloji', 'kod', 'kutuphane', 'construit', 'technologie', 'code', 'bibliotheque', 'gebaut', 'technik', 'bibliothek', 'programmiert'],
+      a: T('It’s a lightweight static site: plain **HTML, CSS and JavaScript** with no framework or libraries. Two entry points (`index.html` landing and `main-page.html` hub), an iOS-style glass interface with light/dark themes, four-language support, and the orb is a hand-written **WebGL shader**. This chat is plain JS too, with a built-in knowledge base.',
+           'Hafif, statik bir site: framework veya kütüphane olmadan düz **HTML, CSS ve JavaScript**. İki giriş noktası (`index.html` açılış ve `main-page.html` merkez), açık/koyu temalı iOS tarzı cam arayüz, dört dil desteği ve elle yazılmış bir **WebGL shader** olan küre. Bu sohbet de düz JS ve yerleşik bir bilgi tabanıyla çalışır.',
+           'C’est un site statique léger : **HTML, CSS et JavaScript** purs, sans framework ni bibliothèque. Deux points d’entrée (`index.html` et `main-page.html`), une interface vitrée façon iOS en clair/sombre, quatre langues, et l’orbe est un **shader WebGL** écrit à la main. Ce chat est aussi du JS pur avec une base de connaissances intégrée.',
+           'Eine schlanke statische Seite: reines **HTML, CSS und JavaScript** ohne Framework oder Bibliotheken. Zwei Einstiegspunkte (`index.html` und `main-page.html`), eine iOS-artige Glas-Oberfläche in Hell/Dunkel, vier Sprachen, und die Kugel ist ein handgeschriebener **WebGL-Shader**. Dieser Chat ist ebenfalls reines JS mit eingebauter Wissensbasis.'),
+      go: [], rel: ['orb', 'demo', 'privacy'] },
+
+    { id: 'voice', t: T('Voice commands', 'Sesli komutlar', 'Commandes vocales', 'Sprachbefehle'),
+      k: ['voice', 'voice command', 'voice commands', 'voice input', 'microphone', 'mic', 'speak', 'speech', 'talk to you', 'talk to me', 'talk', 'sesli', 'ses', 'mikrofon', 'konus', 'konusabilir miyim', 'sesle', 'voix', 'vocal', 'vocale', 'micro', 'parler', 'parle', 'commande vocale', 'commandes vocales', 'stimme', 'sprachbefehl', 'sprachbefehle', 'sprachsteuerung', 'sprechen', 'spracheingabe'],
+      a: function (lang) {
+        var base = VOICE[lang];
+        if (typeof document !== 'undefined' && !(win.SpeechRecognition || win.webkitSpeechRecognition)) base += ' ' + VOICE_NO[lang];
+        return base;
+      },
+      go: [], rel: ['can', 'tabs', 'privacy'] },
+
+    { id: 'backtop', t: T('Back to top', 'Başa dön', 'Retour en haut', 'Nach oben'),
+      k: ['back to top', 'scroll', 'top button', 'basa don', 'kaydir', 'retour en haut', 'defiler', 'nach oben', 'scrollen'],
+      a: T('When you scroll down a long tab, a **Back to top** button appears so you can jump straight back up.',
+           'Uzun bir sekmede aşağı kaydırdığında, hemen yukarı dönmen için bir **Başa dön** düğmesi belirir.',
+           'Quand tu descends dans un long onglet, un bouton **Retour en haut** apparaît pour remonter d’un coup.',
+           'Wenn du in einem langen Tab nach unten scrollst, erscheint ein **Nach oben**-Button zum direkten Zurückspringen.'),
+      go: [], rel: ['tabs', 'search', 'menu'] },
+
+    /* ---------- small talk ---------- */
+    { id: 'hello', t: T('Hello', 'Merhaba', 'Salut', 'Hallo'), max: 4, w: 2,
+      k: ['hi', 'hello', 'hey', 'yo', 'hiya', 'good morning', 'good evening', 'sup', 'merhaba', 'selam', 'gunaydin', 'iyi aksamlar', 'slm', 'bonjour', 'salut', 'coucou', 'bonsoir', 'hallo', 'guten tag', 'moin', 'servus', 'guten morgen'],
+      dynamic: 'hello', go: [], rel: ['can', 'challenge', 'perks'] },
+
+    { id: 'how-are-you', t: T('How are you?', 'Nasılsın?', 'Comment vas-tu ?', 'Wie geht’s?'), max: 5, w: 2,
+      k: ['how are you', 'how are you doing', 'whats up', 'how is it going', 'nasilsin', 'naber', 'ne haber', 'ca va', 'comment vas tu', 'comment ca va', 'wie gehts', 'wie geht es dir', 'wie gehts dir'],
+      a: T('Doing great, my sparkle levels are at 100%! ✨ What do you want to play or know?',
+           'Harikayım, parıltı seviyem %100! ✨ Ne oynamak ya da öğrenmek istersin?',
+           'Au top, mon niveau de brillance est à 100 % ! ✨ Qu’as-tu envie de jouer ou de savoir ?',
+           'Mir geht’s super, mein Glitzerlevel liegt bei 100 %! ✨ Was möchtest du spielen oder wissen?'),
+      go: [], rel: ['challenge', 'modes', 'can'] },
+
+    { id: 'thanks', t: T('Thanks', 'Teşekkürler', 'Merci', 'Danke'), max: 5, w: 2,
+      k: ['thanks', 'thank you', 'thx', 'ty', 'cheers', 'great', 'awesome', 'cool', 'nice', 'perfect', 'tesekkurler', 'tesekkur ederim', 'sagol', 'harika', 'super', 'merci', 'genial', 'parfait', 'danke', 'dankeschon', 'toll', 'prima'],
+      a: T('Anytime! 🎮 Want me to cook up a challenge, or is there something else you’d like to know?',
+           'Rica ederim! 🎮 Sana bir meydan okuma hazırlayayım mı, yoksa başka bir şey mi öğrenmek istersin?',
+           'Avec plaisir ! 🎮 Je te prépare un défi, ou tu veux savoir autre chose ?',
+           'Gern geschehen! 🎮 Soll ich dir eine Challenge zaubern, oder möchtest du noch etwas wissen?'),
+      go: [], rel: ['challenge', 'modes', 'shop'] },
+
+    { id: 'bye', t: T('Bye', 'Hoşça kal', 'Au revoir', 'Tschüss'), max: 4, w: 2,
+      k: ['bye', 'goodbye', 'see you', 'later', 'cya', 'gule gule', 'hosca kal', 'gorusuruz', 'au revoir', 'a plus', 'a bientot', 'tschuss', 'auf wiedersehen', 'bis bald', 'ciao'],
+      a: T('See you later! Keep that streak alive. 🔥', 'Görüşürüz! Serini sakın bozma. 🔥', 'À bientôt ! Garde ta série. 🔥', 'Bis später! Halte deine Serie am Leben. 🔥'),
+      go: [], rel: [] },
+
+    { id: 'joke', t: T('Tell me a joke', 'Şaka yap', 'Raconte une blague', 'Erzähl einen Witz'),
+      k: ['joke', 'funny', 'make me laugh', 'saka', 'komik', 'guldur', 'blague', 'drole', 'rire', 'witz', 'lustig', 'lachen'],
+      a: T('Why did the player bring a ladder to the boss fight? Because the combo was **sky-high**. 🪜', 'Oyuncu boss savaşına neden merdiven getirdi? Çünkü kombo **göklerdeydi**. 🪜', 'Pourquoi le joueur a-t-il apporté une échelle au combat de boss ? Parce que le combo était **au plafond**. 🪜', 'Warum brachte der Spieler eine Leiter zum Bosskampf mit? Weil die Combo **himmelhoch** war. 🪜'),
+      go: [], rel: ['boss', 'combo', 'challenge'] }
+  ];
+
+  var VOICE = T(
+    'Yes! Tap the 🎤 button next to the text box and talk to me. I listen in the site’s language (English, Türkçe, Français or Deutsch) and treat it just like typing. Try “open the Watch tab”, “how much is the Streak Shield?” or “give me a hard challenge”. Your browser asks for microphone permission the first time. Voice input works in Chrome, Edge and Safari (not Firefox), and your browser’s speech service does the transcribing.',
+    'Evet! Metin kutusunun yanındaki 🎤 düğmesine dokun ve benimle konuş. Sitenin diliyle (English, Türkçe, Français, Deutsch) dinlerim ve yazmışsın gibi cevap veririm. “İzle sekmesini aç”, “Streak Shield kaç jeton?” ya da “bana zor bir meydan okuma ver” dene. Tarayıcı ilk seferde mikrofon izni ister. Sesli giriş Chrome, Edge ve Safari’de çalışır (Firefox’ta çalışmaz); yazıya çevirmeyi tarayıcının konuşma servisi yapar.',
+    'Oui ! Touche le bouton 🎤 à côté de la zone de texte et parle-moi. J’écoute dans la langue du site (English, Türkçe, Français, Deutsch) et je traite ça comme si tu l’avais écrit. Essaie « ouvre Regarder », « combien coûte le Streak Shield ? » ou « donne-moi un défi difficile ». Le navigateur demande l’accès au micro la première fois. La saisie vocale fonctionne dans Chrome, Edge et Safari (pas Firefox), et c’est le service vocal du navigateur qui transcrit.',
+    'Ja! Tippe auf den 🎤-Button neben dem Textfeld und sprich mit mir. Ich höre in der Sprache der Seite zu (English, Türkçe, Français, Deutsch) und behandle es wie getippten Text. Probier „öffne Ansehen“, „wie viel kostet der Streak Shield?“ oder „gib mir eine schwere Challenge“. Beim ersten Mal fragt der Browser nach Mikrofonzugriff. Spracheingabe funktioniert in Chrome, Edge und Safari (nicht Firefox); die Transkription übernimmt der Sprachdienst deines Browsers.');
+  var VOICE_NO = T(
+    '⚠️ Your browser doesn’t support voice input, so the 🎤 button is hidden here.',
+    '⚠️ Tarayıcın sesli girişi desteklemiyor, bu yüzden 🎤 düğmesi burada gizli.',
+    '⚠️ Ton navigateur ne gère pas la saisie vocale, donc le bouton 🎤 est masqué ici.',
+    '⚠️ Dein Browser unterstützt keine Spracheingabe, deshalb ist der 🎤-Button hier ausgeblendet.');
+
+  var BY_ID = {};
+  KB.forEach(function (e) { e.k = e.k.filter(function (k, i, a) { return a.indexOf(k) === i; }); BY_ID[e.id] = e; });
+
+  /* ======================================================================
+     PART 1b · ENGINE
+     ====================================================================== */
+  function norm(s) {
+    return String(s || '').toLowerCase()
+      .replace(/ı/g, 'i').replace(/ß/g, 'ss').replace(/æ/g, 'ae').replace(/œ/g, 'oe')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/['’`]/g, ' ').replace(/[^a-z0-9+]+/g, ' ').trim();
+  }
+  function lev(a, b) {
+    if (a === b) return 0;
+    var m = a.length, n = b.length, i, j, prev = [], cur;
+    for (j = 0; j <= n; j++) prev[j] = j;
+    for (i = 1; i <= m; i++) {
+      cur = [i];
+      for (j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+      prev = cur;
+    }
+    return prev[n];
+  }
+  function parse(text) {
+    var n = norm(text), tok = n ? n.split(' ') : [];
+    return { raw: text, text: ' ' + n + ' ', tok: tok };
+  }
+  function kwScore(kw, q) {
+    if (kw.indexOf(' ') > -1) return q.text.indexOf(' ' + kw) > -1 ? kw.split(' ').length * 2.2 : 0;
+    var best = 0;
+    for (var i = 0; i < q.tok.length; i++) {
+      var t = q.tok[i];
+      if (t === kw) { best = 2; break; }
+      if (kw.length >= 4 && t.indexOf(kw) === 0 && t.length - kw.length <= 3) best = Math.max(best, 1.7);
+      else if (t.length >= 5 && kw.length >= 5 && Math.abs(t.length - kw.length) <= 1 && lev(t, kw) <= 1) best = Math.max(best, 1.3);
+    }
+    return best;
+  }
+  function scoreEntry(e, q) {
+    if (e.max && q.tok.length > e.max) return 0;
+    var s = 0;
+    for (var i = 0; i < e.k.length; i++) s += kwScore(e.k[i], q);
+    return s * (e.w || 1);
+  }
+
+  var MORE_RE = /^(more|tell me more|go on|continue|details|elaborate|and|what else|daha fazla|devam|baska|plus|encore|et alors|mehr|weiter|noch mehr)( |$)/;
+
+  var PROFILE_LEVEL = {
+    start: T('Casual', 'Rahat', 'Décontracté', 'Entspannt'),
+    grow: T('Competitive', 'Rekabetçi', 'Compétitif', 'Kompetitiv'),
+    conf: T('Hardcore', 'Hardcore', 'Hardcore', 'Hardcore')
+  };
+
+  var UI = {
+    en: { title: 'Uzio AI', sub: 'Knows everything about Uzio', ph: 'Ask me anything about Uzio…', send: 'Send', close: 'Close', reset: 'New chat', open: 'Open Uzio AI',
+          thinking: 'Uzio is typing', mic: 'Voice input', micStop: 'Stop listening', listening: 'Listening…', speak: 'Speak to Uzio', speakStop: 'Listening… tap to stop', speakNo: 'Voice isn’t supported in this browser',
+          micFile: '⚠️ Voice input doesn’t work when the page is opened as a file on your computer. Put the site online (https) or run it from a local server (localhost), then try again.', micDead: '⚠️ I can’t hear your microphone. Check that the right microphone is selected and allowed for this site (lock icon in the address bar), then tap Speak again.', micBlocked: 'I can’t use the microphone. Allow microphone access for this site in your browser settings, then tap 🎤 again.', micNone: 'I didn’t catch that. Tap 🎤 and try again.', micNoDevice: 'I can’t find a microphone on this device.', micNet: 'Voice input needs an internet connection (your browser’s speech service). You can still type to me.', micErr: 'Voice input hit a snag. You can still type to me.',
+          fallback: 'I only know Uzio, and I couldn’t find that on the site. Here are things I can help with:',
+          greetNamed: 'Hey {n}! 👋 I’m Uzio. I know every corner of this site, and I can invent challenges for you. What are you curious about?',
+          greet: 'Hey! 👋 I’m Uzio. I know every corner of this site, and I can invent challenges for you. What are you curious about?',
+          more: 'Here’s where we can go next:', related: 'You might also like:' },
+    tr: { title: 'Uzio AI', sub: 'Uzio hakkında her şeyi bilir', ph: 'Uzio hakkında her şeyi sor…', send: 'Gönder', close: 'Kapat', reset: 'Yeni sohbet', open: 'Uzio AI’ı aç',
+          thinking: 'Uzio yazıyor', mic: 'Sesli giriş', micStop: 'Dinlemeyi durdur', listening: 'Dinliyorum…', speak: 'Uzio ile konuş', speakStop: 'Dinliyorum… durdurmak için dokun', speakNo: 'Bu tarayıcı sesi desteklemiyor',
+          micFile: '⚠️ Sayfa bilgisayarında dosya olarak açıldığında sesli giriş çalışmaz. Siteyi çevrimiçi (https) yayınla veya yerel sunucudan (localhost) çalıştır, sonra tekrar dene.', micDead: '⚠️ Mikrofonunu duyamıyorum. Doğru mikrofonun seçili ve bu site için izinli olduğunu kontrol et (adres çubuğundaki kilit simgesi), sonra tekrar Konuş’a dokun.', micBlocked: 'Mikrofonu kullanamıyorum. Tarayıcı ayarlarından bu site için mikrofon iznini aç, sonra 🎤’a tekrar dokun.', micNone: 'Seni duyamadım. 🎤’a dokunup tekrar dene.', micNoDevice: 'Bu cihazda mikrofon bulamıyorum.', micNet: 'Sesli giriş internet bağlantısı gerektirir (tarayıcının konuşma servisi). Yine de yazabilirsin.', micErr: 'Sesli girişte bir sorun çıktı. Yine de yazabilirsin.',
+          fallback: 'Ben sadece Uzio’yu biliyorum ve bunu sitede bulamadım. Şunlarda yardımcı olabilirim:',
+          greetNamed: 'Selam {n}! 👋 Ben Uzio. Bu sitenin her köşesini biliyorum ve senin için meydan okumalar icat edebilirim. Neyi merak ediyorsun?',
+          greet: 'Selam! 👋 Ben Uzio. Bu sitenin her köşesini biliyorum ve senin için meydan okumalar icat edebilirim. Neyi merak ediyorsun?',
+          more: 'Şuradan devam edebiliriz:', related: 'Bunlar da ilgini çekebilir:' },
+    fr: { title: 'Uzio AI', sub: 'Sait tout sur Uzio', ph: 'Demande-moi tout sur Uzio…', send: 'Envoyer', close: 'Fermer', reset: 'Nouveau chat', open: 'Ouvrir Uzio AI',
+          thinking: 'Uzio écrit', mic: 'Saisie vocale', micStop: 'Arrêter l’écoute', listening: 'J’écoute…', speak: 'Parler à Uzio', speakStop: 'J’écoute… touche pour arrêter', speakNo: 'La voix n’est pas prise en charge par ce navigateur',
+          micFile: '⚠️ La saisie vocale ne marche pas quand la page est ouverte comme un fichier sur ton ordinateur. Mets le site en ligne (https) ou lance-le depuis un serveur local (localhost), puis réessaie.', micDead: '⚠️ Je n’entends pas ton micro. Vérifie que le bon micro est sélectionné et autorisé pour ce site (icône de cadenas dans la barre d’adresse), puis touche Parler à nouveau.', micBlocked: 'Je ne peux pas utiliser le micro. Autorise l’accès au micro pour ce site dans les réglages du navigateur, puis touche 🎤 à nouveau.', micNone: 'Je n’ai pas compris. Touche 🎤 et réessaie.', micNoDevice: 'Je ne trouve pas de micro sur cet appareil.', micNet: 'La saisie vocale nécessite une connexion internet (le service vocal de ton navigateur). Tu peux toujours écrire.', micErr: 'La saisie vocale a rencontré un souci. Tu peux toujours écrire.',
+          fallback: 'Je ne connais qu’Uzio et je n’ai pas trouvé ça sur le site. Voici ce dont je peux parler :',
+          greetNamed: 'Salut {n} ! 👋 Je suis Uzio. Je connais chaque recoin de ce site et je peux inventer des défis pour toi. Qu’est-ce qui te fait envie ?',
+          greet: 'Salut ! 👋 Je suis Uzio. Je connais chaque recoin de ce site et je peux inventer des défis pour toi. Qu’est-ce qui te fait envie ?',
+          more: 'Voici où on peut aller ensuite :', related: 'Ça pourrait aussi t’intéresser :' },
+    de: { title: 'Uzio AI', sub: 'Weiß alles über Uzio', ph: 'Frag mich alles über Uzio…', send: 'Senden', close: 'Schließen', reset: 'Neuer Chat', open: 'Uzio AI öffnen',
+          thinking: 'Uzio tippt', mic: 'Spracheingabe', micStop: 'Zuhören beenden', listening: 'Ich höre zu…', speak: 'Mit Uzio sprechen', speakStop: 'Ich höre zu… tippen zum Beenden', speakNo: 'Sprache wird von diesem Browser nicht unterstützt',
+          micFile: '⚠️ Spracheingabe funktioniert nicht, wenn die Seite als Datei auf deinem Computer geöffnet wird. Stelle die Seite online (https) oder starte sie über einen lokalen Server (localhost) und versuche es erneut.', micDead: '⚠️ Ich höre dein Mikrofon nicht. Prüfe, ob das richtige Mikrofon ausgewählt und für diese Seite erlaubt ist (Schloss-Symbol in der Adressleiste), und tippe erneut auf Sprechen.', micBlocked: 'Ich kann das Mikrofon nicht nutzen. Erlaube den Mikrofonzugriff für diese Seite in den Browsereinstellungen und tippe dann erneut auf 🎤.', micNone: 'Das habe ich nicht verstanden. Tippe auf 🎤 und versuche es nochmal.', micNoDevice: 'Ich finde auf diesem Gerät kein Mikrofon.', micNet: 'Spracheingabe braucht eine Internetverbindung (der Sprachdienst deines Browsers). Du kannst mir trotzdem schreiben.', micErr: 'Bei der Spracheingabe ist etwas schiefgelaufen. Du kannst mir trotzdem schreiben.',
+          fallback: 'Ich kenne nur Uzio und habe das auf der Seite nicht gefunden. Dabei kann ich helfen:',
+          greetNamed: 'Hey {n}! 👋 Ich bin Uzio. Ich kenne jede Ecke dieser Seite und kann Challenges für dich erfinden. Was interessiert dich?',
+          greet: 'Hey! 👋 Ich bin Uzio. Ich kenne jede Ecke dieser Seite und kann Challenges für dich erfinden. Was interessiert dich?',
+          more: 'Hier können wir weitermachen:', related: 'Das könnte dich auch interessieren:' }
+  };
+
+  /* ---------- challenge generator ---------- */
+  var MODES = ['Rapid Fire', 'Boss Battle', 'Puzzle Drop', 'Perfect Run', 'Beat Uzio', 'Risk It', 'Quest Run'];
+  var MODE_MIN = { 'Rapid Fire': [90, 's'], 'Boss Battle': [5, 'm'], 'Puzzle Drop': [3, 'm'], 'Perfect Run': [4, 'm'], 'Beat Uzio': [2, 'm'], 'Risk It': [3, 'm'], 'Quest Run': [7, 'm'] };
+  var UNIT = { s: { en: 'sec', tr: 'sn', fr: 's', de: 'Sek.' }, m: { en: 'min', tr: 'dk', fr: 'min', de: 'Min.' } };
+  var ADJ = ['Neon', 'Turbo', 'Shadow', 'Golden', 'Chaos', 'Velvet', 'Rogue', 'Hyper'];
+  var NOUN = ['Gauntlet', 'Rush', 'Vault', 'Run', 'Showdown', 'Heist', 'Trial', 'Spiral'];
+  var TWISTS = {
+    en: ['Every correct answer shrinks the timer by 2 seconds.', 'No hints allowed, but your combo bonus doubles.', 'Miss once and the multiplier resets to 1×.', 'The final round is worth triple points.', 'Uzio steals 10 points for every slow answer.', 'Hit a 5× combo to unlock a bonus chest.'],
+    tr: ['Her doğru cevap zamanlayıcıyı 2 saniye kısaltır.', 'İpucu yok ama kombo bonusun ikiye katlanır.', 'Bir kez kaçırırsan çarpan 1×’e döner.', 'Son tur üç kat puan değerinde.', 'Uzio her yavaş cevap için 10 puan çalar.', '5× kombo yaparsan bonus sandığı açılır.'],
+    fr: ['Chaque bonne réponse raccourcit le minuteur de 2 secondes.', 'Aucun indice, mais ton bonus de combo double.', 'Une erreur et le multiplicateur retombe à 1×.', 'La dernière manche vaut triple points.', 'Uzio te vole 10 points à chaque réponse lente.', 'Atteins un combo 5× pour ouvrir un coffre bonus.'],
+    de: ['Jede richtige Antwort verkürzt den Timer um 2 Sekunden.', 'Keine Hinweise, aber dein Combo-Bonus verdoppelt sich.', 'Ein Fehler und der Multiplikator fällt auf 1× zurück.', 'Die letzte Runde zählt dreifach.', 'Uzio klaut dir 10 Punkte pro langsamer Antwort.', 'Erreiche eine 5×-Combo und öffne eine Bonus-Truhe.']
+  };
+  var CH_LABEL = {
+    en: ['Mode', 'Twist', 'Difficulty', 'Reward'], tr: ['Mod', 'Sürpriz kural', 'Zorluk', 'Ödül'],
+    fr: ['Mode', 'Règle spéciale', 'Difficulté', 'Récompense'], de: ['Modus', 'Twist', 'Schwierigkeit', 'Belohnung']
+  };
+  var CH_OUT = { en: 'Want another one? Just say “another”, or ask for an easier or harder version.', tr: 'Bir tane daha ister misin? “Bir tane daha” de ya da daha kolay/zor bir sürüm iste.', fr: 'Un autre ? Dis « un autre », ou demande une version plus facile ou plus difficile.', de: 'Noch eine? Sag einfach „noch eine“ oder bitte um eine leichtere oder härtere Version.' };
+
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+  function makeChallenge(lang, q, profile) {
+    var diff = 2;
+    if (profile && profile.level === 'start') diff = 1; else if (profile && profile.level === 'conf') diff = 3;
+    var raw = q.text;
+    if (/ (easy|easier|chill|relaxed|kolay|daha kolay|facile|plus facile|leicht|leichter|einfach) /.test(raw)) diff = 1;
+    if (/ (hard|harder|hardest|insane|impossible|spicy|zor|daha zor|imkansiz|difficile|plus difficile|schwer|schwerer|unmoglich) /.test(raw)) diff = 3;
+    var mode = null;
+    MODES.forEach(function (m) { if (raw.indexOf(' ' + norm(m)) > -1) mode = m; });
+    if (!mode && / (boss|patron|endgegner) /.test(raw)) mode = 'Boss Battle';
+    if (!mode) mode = pick(diff === 3 ? ['Boss Battle', 'Perfect Run', 'Risk It', 'Rapid Fire'] : diff === 1 ? ['Rapid Fire', 'Puzzle Drop', 'Beat Uzio'] : MODES);
+    var mm = MODE_MIN[mode], dur = mm[0] + ' ' + UNIT[mm[1]][lang];
+    var xp = [120, 150, 200, 250][Math.min(3, diff + (Math.random() > .5 ? 1 : 0))];
+    var coins = 20 * diff + Math.floor(Math.random() * 3) * 10;
+    var lab = CH_LABEL[lang], pep = new Array(diff + 1).join('🌶️');
+    return '🎯 **' + pick(ADJ) + ' ' + pick(NOUN) + '**\n' +
+      lab[0] + ': **' + mode + '** · ' + dur + '\n' +
+      lab[1] + ': ' + pick(TWISTS[lang]) + '\n' +
+      lab[2] + ': ' + pep + '\n' +
+      lab[3] + ': **+' + xp + ' XP** & ' + coins + ' 🪙\n\n' + CH_OUT[lang];
+  }
+
+  function dyn(kind, lang, q, profile, ctx) {
+    var name = profile && profile.name, ui = UI[lang];
+    if (kind === 'challenge') return makeChallenge(lang, q, profile);
+    if (kind === 'hello') return (name ? ui.greetNamed.replace('{n}', name) : ui.greet);
+    if (kind === 'me') {
+      var lv = profile && profile.level && PROFILE_LEVEL[profile.level] ? PROFILE_LEVEL[profile.level][lang] : null;
+      var ints = profile && profile.interests && profile.interests.length ? profile.interests.join(', ') : null;
+      var L = {
+        en: ['You haven’t told me your name yet. Open the account menu → **Replay welcome** to set it.', 'You’re **{n}**', 'Level 7 · Explorer with 2,340 XP, 640 coins and a 4-day streak (sample stats for now)', 'Play style', 'Interests'],
+        tr: ['Henüz adını söylemedin. Hesap menüsü → **Karşılama ekranını yeniden göster** ile ayarlayabilirsin.', 'Sen **{n}**’sin', '7. Seviye · Kâşif; 2.340 XP, 640 jeton ve 4 günlük seri (şimdilik örnek veriler)', 'Oyun tarzı', 'İlgi alanları'],
+        fr: ['Tu ne m’as pas encore dit ton prénom. Menu du compte → **Revoir l’accueil** pour le définir.', 'Tu es **{n}**', 'Niveau 7 · Explorateur avec 2 340 XP, 640 pièces et une série de 4 jours (stats d’exemple pour l’instant)', 'Style de jeu', 'Centres d’intérêt'],
+        de: ['Du hast mir deinen Namen noch nicht verraten. Kontomenü → **Begrüßung wiederholen**, um ihn zu setzen.', 'Du bist **{n}**', 'Level 7 · Explorer mit 2.340 XP, 640 Münzen und einer 4-Tage-Serie (aktuell Beispielwerte)', 'Spielstil', 'Interessen']
+      }[lang];
+      if (!name) return L[0];
+      var out = L[1].replace('{n}', name) + ': ' + L[2] + '.';
+      if (lv) out += '\n' + L[3] + ': **' + lv + '**';
+      if (ints) out += '\n' + L[4] + ': ' + ints;
+      return out;
+    }
+    return '';
+  }
+
+  /* ---------- tab commands: "open the Watch tab", "izle sekmesini aç", "ouvre Perks", "öffne Extras" ---------- */
+  var NAV_RE = {
+    home:      / (home|homepage|home page|main page|hub|dashboard|ana ?sayfa\w*|accueil|startseite|start) /,
+    play:      / (play|games?|oyna\w*|oyun|oyunlar\w*|jouer|jeux|spielen|spiele) /,
+    watch:     / (watch|videos?|clips?|izle\w*|regarder|regarde|vidos?|ansehen|anschauen) /,
+    perks:     / (perks?|shop|store|rewards?|magaza\w*|avantaj\w*|boutique|avantages?|extras|belohnungen) /,
+    'uzio-ai': / (uzio ai\w*|ai tab|game master|oyun ustas\w*|maitre du jeu|spielleiter) /
+  };
+  var NAV_STRONG = / (open|opens|go to|goto|take me to|bring me to|switch to|navigate to|navigate|jump to|head to|launch|visit|ac|acar misin|acsana|git|gitsene|gotur\w*|gec|ouvre|ouvrir|va a|va sur|aller a|aller sur|emmene moi a|emmene moi sur|amene moi a|passe a|passe sur|offne|offnen|geh zu|geh auf|gehe zu|gehe auf|bring mich zu|wechsle zu|wechsle auf|wechsel zu) /;
+  var NAV_WEAK = / (show me|show|display|see|goster\w*|montre moi|montre|affiche|zeig mir|zeig|zeige mir|zeige) /;
+  var NAV_TABWORD = / (tab|tabs|page|section|screen|sekme\w*|sayfa\w*|onglet\w*|seite|bereich) /;
+  var NAV_INFO = { home: 'home', play: 'modes', watch: 'videos', perks: 'perks', 'uzio-ai': 'uzioai' };
+  var NAV_SAY = {
+    en: ['I’m on it! Opening **{v}**…', 'Sure thing, taking you to **{v}**…', 'Coming right up: **{v}**!'],
+    tr: ['Hemen hallediyorum! **{v}** açılıyor…', 'Tamamdır, seni **{v}** sekmesine götürüyorum…', 'Geliyor: **{v}**!'],
+    fr: ['Je m’en occupe ! J’ouvre **{v}**…', 'Avec plaisir, je t’emmène sur **{v}**…', 'Voilà : **{v}** !'],
+    de: ['Bin dran! **{v}** wird geöffnet…', 'Klar, ich bringe dich zu **{v}**…', 'Kommt sofort: **{v}**!']
+  };
+  var NAV_HERE = {
+    en: 'You’re already on **{v}**! Want to know what’s here?', tr: 'Zaten **{v}** sekmesindesin! Burada neler var, anlatayım mı?',
+    fr: 'Tu es déjà sur **{v}** ! Je te raconte ce qu’il y a ici ?', de: 'Du bist schon bei **{v}**! Soll ich erzählen, was es hier gibt?'
+  };
+  function detectNav(q) {
+    var t = q.text, hit = null, best = 1e9;
+    for (var v in NAV_RE) {
+      var m = NAV_RE[v].exec(t);
+      if (m && m.index < best) { best = m.index; hit = v; }
+    }
+    if (!hit) return null;
+    var strong = NAV_STRONG.test(t), tab = NAV_TABWORD.test(t);
+    if (strong || (tab && NAV_WEAK.test(t)) || (tab && q.tok.length <= 4)) return hit;
+    return null;
+  }
+
+  /* ---------- the public reply() ---------- */
+  function reply(text, opts) {
+    opts = opts || {};
+    var lang = LANGS.indexOf(opts.lang) > -1 ? opts.lang : 'en', ui = UI[lang];
+    var state = opts.state || {};
+    var q = parse(text);
+    var out = { text: '', go: [], rel: [], id: null };
+
+    /* direct topic (suggestion chips) */
+    var entry = opts.id ? BY_ID[opts.id] : null;
+    var top = 0, second = 0, secondE = null;
+
+    if (!entry) {
+      var nv = detectNav(q);
+      if (nv) {
+        var vn = VIEW_NAME[nv][lang];
+        out.nav = nv; out.rel = [NAV_INFO[nv]];
+        if (opts.view && opts.view === nv) { out.text = NAV_HERE[lang].replace('{v}', vn); out.nav = null; }
+        else out.text = pick(NAV_SAY[lang]).replace('{v}', vn);
+        return out;
+      }
+    }
+    if (!entry) {
+      if (!q.tok.length) { out.text = ui.greet; out.rel = ['can', 'challenge', 'modes']; return out; }
+      /* "more" / "another" follow-ups */
+      if (state.last && MORE_RE.test(q.text.trim() + ' ')) {
+        var le = BY_ID[state.last];
+        if (le) {
+          if (le.dynamic === 'challenge') { entry = le; }
+          else { out.text = ui.more; out.go = le.go || []; out.rel = (le.rel || []).slice(); out.id = le.id; return out; }
+        }
+      }
+      if (!entry && state.last && BY_ID[state.last] && BY_ID[state.last].dynamic === 'challenge' && / (another|again|one more|new one|bir tane daha|bir daha|un autre|encore une|noch eine|nochmal) /.test(q.text)) entry = BY_ID[state.last];
+      if (!entry) {
+        var scored = KB.map(function (e) { return { e: e, s: scoreEntry(e, q) }; }).sort(function (a, b) { return b.s - a.s; });
+        top = scored[0].s; second = scored[1].s; secondE = scored[1].e;
+        /* gentle context: a short follow-up leans toward the last topic's neighbours */
+        if (state.last && q.tok.length <= 4 && top < 3.2 && BY_ID[state.last]) {
+          var nb = BY_ID[state.last].rel || [];
+          for (var i = 0; i < scored.length; i++) if (nb.indexOf(scored[i].e.id) > -1) scored[i].s += 0.6;
+          scored.sort(function (a, b) { return b.s - a.s; });
+          top = scored[0].s;
+        }
+        if (top >= 1.2) entry = scored[0].e;
+      }
+    }
+
+    if (!entry) {
+      out.text = ui.fallback;
+      var pool = ['modes', 'shop', 'xp', 'challenge', 'videos', 'languages', 'quests', 'uzioai'];
+      out.rel = pool.sort(function () { return Math.random() - .5; }).slice(0, 4);
+      return out;
+    }
+
+    out.id = entry.id;
+    var a = entry.dynamic ? dyn(entry.dynamic, lang, q, opts.profile, state) : (typeof entry.a === 'function' ? entry.a(lang, q, opts.profile) : entry.a[lang]);
+    out.text = a;
+    out.go = entry.go || [];
+    out.rel = (entry.rel || []).slice();
+    /* a runner-up that was nearly as strong is worth surfacing */
+    if (top && second >= top * 0.75 && secondE && secondE.id !== entry.id && out.rel.indexOf(secondE.id) < 0 && secondE.max == null) out.rel.unshift(secondE.id);
+    out.rel = out.rel.filter(function (id) { return id !== entry.id; }).slice(0, 3);
+    return out;
+  }
+
+  /* ======================================================================
+     PART 2 · CHAT PANEL (only runs in a browser)
+     ====================================================================== */
+  var api = { reply: reply, KB: KB, UI: UI, norm: norm, LANGS: LANGS, title: function (id, lang) { return BY_ID[id].t[lang]; } };
+
+  if (typeof document === 'undefined' || !win.document) return api;
+
+  var doc = win.document, docEl = doc.documentElement;
+  var reduce = win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var isHub = !!doc.getElementById('panel');
+  var panel, logEl, form, input, sendBtn, chipsEl, titleEl, subEl, closeBtn, resetBtn, histBtn;
+  var HIST = { en: 'Chat history', tr: 'Sohbet geçmişi', fr: 'Historique du chat', de: 'Chatverlauf' };
+  /* in the room the chat history is a pop-up above the input bar; this button (next to the bar) toggles it */
+  function histOpen(on) {
+    if (!panel) return;
+    panel.classList.toggle('hist-open', !!on);
+    if (histBtn) histBtn.setAttribute('aria-expanded', String(!!on));
+  }
+  var state = { last: null, busy: false, open: false, started: false, room: false };
+  var SR = win.SpeechRecognition || win.webkitSpeechRecognition;
+  var SR_LANG = { en: 'en-US', tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
+  var micBtn = null, rec = null, recAborted = false;
+  function speakEl() { return doc.querySelector('.room-speak'); }
+  function roomEl() { return doc.querySelector('.room'); }
+  function micDis(v) { if (micBtn) micBtn.disabled = v; var sp = speakEl(); if (sp && SR) sp.disabled = v; }
+  function roomMood(cls, on) { if (on) stopAntic(); var r = roomEl(); if (r) r.classList.toggle(cls, !!on); }
+  function cur(on) { if (win.UzioCursor) win.UzioCursor.busy('chat', on); } /* spinning ring by the cursor while Uzio is thinking */
+  var returnFocus = null;
+
+  function curLang() {
+    var l = docEl.lang;
+    if (LANGS.indexOf(l) < 0) { try { l = win.localStorage.getItem('uzio-language'); } catch (e) {} }
+    return LANGS.indexOf(l) > -1 ? l : 'en';
+  }
+  function profile() {
+    try {
+      var p = JSON.parse(win.localStorage.getItem('uzio-profile'));
+      if (p && typeof p === 'object') return { name: typeof p.name === 'string' ? p.name.trim().slice(0, 20) : '', level: p.level || '', interests: Array.isArray(p.interests) ? p.interests : [] };
+    } catch (e) {}
+    return { name: '', level: '', interests: [] };
+  }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fmt(s) {
+    return esc(s).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\n/g, '<br>');
+  }
+
+  function build() {
+    panel = doc.createElement('section');
+    panel.className = 'uai' + (isHub ? ' uai--hub' : '');
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'false');
+    panel.setAttribute('aria-labelledby', 'uaiTitle');
+    panel.inert = true;
+    panel.innerHTML =
+      '<header class="uai-head">' +
+        '<span class="uai-av" aria-hidden="true"></span>' +
+        '<div class="uai-id"><b id="uaiTitle"></b><small id="uaiSub"></small></div>' +
+        '<button class="uai-ib" type="button" data-uai="reset"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4v4.5h4.5"/></svg></button>' +
+        '<button class="uai-ib" type="button" data-uai="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></svg></button>' +
+      '</header>' +
+      '<div class="uai-log" id="uaiLog" role="log" aria-live="polite"></div>' +
+      '<div class="uai-chips" id="uaiChips"></div>' +
+      '<form class="uai-form" autocomplete="off">' +
+        '<button class="uai-hist" type="button" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4.5 3.5V17.5H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"/><path d="M8 10h8M8 13.5h5"/></svg></button>' +
+        '<div class="uai-field">' +
+        '<input class="uai-input" type="text" maxlength="240" enterkeyhint="send" spellcheck="false">' +
+        (SR ? '<button class="uai-mic" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></button>' : '') +
+        '<button class="uai-send" type="submit" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5"/></svg></button>' +
+        '</div>' +
+      '</form>';
+    doc.body.appendChild(panel);
+    logEl = panel.querySelector('.uai-log'); chipsEl = panel.querySelector('.uai-chips');
+    form = panel.querySelector('form'); input = panel.querySelector('.uai-input'); sendBtn = panel.querySelector('.uai-send');
+    titleEl = panel.querySelector('#uaiTitle'); subEl = panel.querySelector('#uaiSub');
+    micBtn = panel.querySelector('.uai-mic'); histBtn = panel.querySelector('.uai-hist');
+    histBtn.addEventListener('click', function () { histOpen(!panel.classList.contains('hist-open')); });
+    if (micBtn) micBtn.addEventListener('click', function () { if (rec) stopMic(); else startMic(); });
+    closeBtn = panel.querySelector('[data-uai="close"]'); resetBtn = panel.querySelector('[data-uai="reset"]');
+
+    form.addEventListener('submit', function (e) { e.preventDefault(); var v = input.value.trim(); if (v) { input.value = ''; sendBtn.disabled = true; ask(v); } });
+    input.addEventListener('input', function () { sendBtn.disabled = !input.value.trim() || state.busy; });
+    closeBtn.addEventListener('click', function () { setOpen(false); });
+    resetBtn.addEventListener('click', function () { reset(); });
+    panel.addEventListener('click', function (e) {
+      var c = e.target.closest('[data-id]');
+      if (c && !state.busy) { ask(c.getAttribute('data-title'), c.getAttribute('data-id')); return; }
+      var g = e.target.closest('[data-go]');
+      if (g) go(g.getAttribute('data-go'));
+    });
+    panel.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); if (panel.classList.contains('uai--room')) histOpen(false); else setOpen(false); } });
+    chipsEl.addEventListener('wheel', function (e) { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { chipsEl.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+    applyLang();
+  }
+
+  function applyLang() {
+    if (!panel) return;
+    var ui = UI[curLang()];
+    titleEl.textContent = ui.title; subEl.textContent = ui.sub;
+    input.placeholder = ui.ph; input.setAttribute('aria-label', ui.ph);
+    sendBtn.setAttribute('aria-label', ui.send); sendBtn.title = ui.send;
+    closeBtn.setAttribute('aria-label', ui.close); closeBtn.title = ui.close;
+    resetBtn.setAttribute('aria-label', ui.reset); resetBtn.title = ui.reset;
+    panel.setAttribute('aria-label', ui.title);
+    if (histBtn) { var hl = HIST[curLang()] || HIST.en; histBtn.setAttribute('aria-label', hl); histBtn.title = hl; }
+    if (micBtn) { var lbl = rec ? ui.micStop : ui.mic; micBtn.setAttribute('aria-label', lbl); micBtn.title = lbl; if (rec) input.placeholder = ui.listening; }
+    Array.prototype.forEach.call(doc.querySelectorAll('.uzio-orb'), function (o) { o.setAttribute('aria-label', ui.open); });
+    var sp = speakEl();
+    if (sp) { var st = sp.querySelector('.room-speak-t'); if (st) st.textContent = rec ? ui.speakStop : ui.speak; sp.setAttribute('aria-label', rec ? ui.speakStop : ui.speak); sp.title = SR ? '' : ui.speakNo; sp.classList.toggle('no-sr', !SR); }
+  }
+
+  function scrollDown() { logEl.scrollTop = logEl.scrollHeight; }
+  function addUser(text) {
+    var d = doc.createElement('div'); d.className = 'uai-msg uai-me'; d.textContent = text; logEl.appendChild(d); histOpen(true); scrollDown();
+  }
+  function addBot() {
+    var d = doc.createElement('div'); d.className = 'uai-msg uai-bot'; logEl.appendChild(d); scrollDown(); return d;
+  }
+  function typing() {
+    var d = addBot(); d.classList.add('uai-typing');
+    d.setAttribute('aria-label', UI[curLang()].thinking);
+    d.innerHTML = '<i></i><i></i><i></i>'; return d;
+  }
+  function chipHtml(ids, lang) {
+    return ids.filter(function (id) { return BY_ID[id]; }).map(function (id) {
+      var t = BY_ID[id].t[lang];
+      return '<button class="uai-chip" type="button" data-id="' + id + '" data-title="' + esc(t) + '">' + esc(t) + '</button>';
+    }).join('');
+  }
+  function goHtml(views, lang) {
+    return views.map(function (v) {
+      var label = OPEN[lang].replace('{v}', VIEW_NAME[v][lang]);
+      return '<button class="uai-go" type="button" data-go="' + v + '">' + esc(label) + ' <span aria-hidden="true">→</span></button>';
+    }).join('');
+  }
+  function go(view) {
+    if (isHub) {
+      if (win.location.hash !== '#' + view) win.location.hash = view;
+      if (win.innerWidth < 640) setOpen(false);
+    } else win.location.href = 'main-page.html#' + view;
+  }
+
+  function say(res, lang, instant) {
+    var node = addBot(), words = res.text.split(/(\s+)/), i = 0;
+    state.busy = true; sendBtn.disabled = true; micDis(true);
+    function finish() {
+      node.innerHTML = fmt(res.text);
+      var extra = '';
+      var g = goHtml(res.go.filter(function (v) { return !isHub || ('#' + v) !== win.location.hash; }), lang);
+      if (g) extra += '<div class="uai-actions">' + g + '</div>';
+      if (extra) { var a = doc.createElement('div'); a.className = 'uai-extra'; a.innerHTML = extra; node.appendChild(a); }
+      chipsEl.innerHTML = chipHtml(res.rel, lang);
+      chipsEl.scrollLeft = 0;
+      state.busy = false; cur(false); roomMood('thinking', false); sendBtn.disabled = !input.value.trim(); micDis(false); scrollDown();
+      if (res.nav) setTimeout(function () { go(res.nav); }, reduce ? 0 : 450);
+    }
+    if (instant || reduce) { finish(); return; }
+    var step = Math.max(1, Math.ceil(words.length / 70));
+    (function tick() {
+      i += step * 2;
+      if (i >= words.length) { finish(); return; }
+      node.innerHTML = fmt(words.slice(0, i).join(''));
+      scrollDown();
+      setTimeout(tick, 22);
+    })();
+  }
+
+  function ask(text, id) {
+    if (state.busy) return;
+    var lang = curLang();
+    addUser(text); chipsEl.innerHTML = '';
+    var trick = state.room && magicWord(text, lang);
+    if (trick) { doMagic(trick, lang); return; }
+    var res = reply(text, { lang: lang, profile: profile(), state: state, id: id, view: isHub ? (win.location.hash.slice(1) || 'home') : null });
+    state.last = res.id || state.last;
+    state.busy = true; sendBtn.disabled = true; micDis(true); cur(true); roomMood('thinking', true);
+    var t = typing();
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); say(res, lang); }, reduce ? 0 : 380 + Math.min(500, res.text.length * 1.2));
+  }
+
+  /* ---------- voice input (the browser's SpeechRecognition; transcript goes through the normal ask() path) ---------- */
+  function voiceFix(t) {
+    return t.replace(/\b(uzi|uzzio|uzeo|uzzi|oozio)\b/gi, 'Uzio').replace(/\bu\.? ?z\.? ?i\.? ?o\b/gi, 'Uzio')
+      .replace(/\bUzio a\.? ?i\b/gi, 'Uzio AI').replace(/\b(perx|purks|perk's)\b/gi, 'perks').trim();
+  }
+  var statusT = 0;
+  function roomStatus(text, keep) { var el = doc.getElementById('roomStatus'); if (!el) return; el.textContent = text || ''; clearTimeout(statusT); if (text && !keep) statusT = setTimeout(function () { el.textContent = ''; }, 9000); }
+  function note(text) { var d = addBot(); d.innerHTML = fmt(text); histOpen(true); scrollDown(); roomStatus(text.replace(/\*\*/g, '')); }
+  function micUI(on) {
+    var ui = UI[curLang()];
+    if (!micBtn) { roomMood('listening', on); var sp0 = speakEl(); if (sp0) { sp0.classList.toggle('on', on); } return; }
+    micBtn.classList.toggle('on', on); micBtn.setAttribute('aria-pressed', String(on));
+    micBtn.setAttribute('aria-label', on ? ui.micStop : ui.mic); micBtn.title = on ? ui.micStop : ui.mic;
+    panel.classList.toggle('uai-listening', on);
+    roomMood('listening', on);
+    var sp = speakEl();
+    if (sp) { sp.classList.toggle('on', on); sp.setAttribute('aria-pressed', String(on)); var st = sp.querySelector('.room-speak-t'); if (st) st.textContent = on ? ui.speakStop : ui.speak; sp.setAttribute('aria-label', st ? st.textContent : ui.speak); }
+    input.placeholder = on ? ui.listening : ui.ph;
+  }
+  var micTimers = [];
+  function clearMicTimers() { micTimers.forEach(clearTimeout); micTimers = []; }
+  function stopMic(abort) {
+    if (!rec) return;
+    var r = rec;
+    recAborted = !!abort;
+    try { abort ? r.abort() : r.stop(); } catch (e) {}
+    /* some browsers never fire "end" after stop() (e.g. when no audio ever arrived): force the reset so the button never gets stuck */
+    micTimers.push(setTimeout(function () {
+      if (rec !== r) return;
+      try { r.abort(); } catch (e) {}
+      if (r.__end) r.__end(true);
+    }, abort ? 150 : 900));
+  }
+  function startMic() {
+    if (!SR || state.busy || rec) return;
+    var lang = curLang(), ui = UI[lang], finalText = '', errored = false, ended = false, audioOk = false;
+    var r = new SR();
+    r.lang = SR_LANG[lang]; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+    recAborted = false; input.value = ''; sendBtn.disabled = true;
+    function end(forced) {
+      if (ended) return; ended = true; clearMicTimers();
+      var t = (finalText || input.value).trim();
+      if (rec === r) rec = null;
+      micUI(false); input.value = ''; if (!errored) roomStatus('');
+      if (recAborted || errored) return;
+      if (t) ask(voiceFix(t)); else note(ui.micNone);
+    }
+    r.__end = end;
+    function heard() { audioOk = true; }
+    r.onstart = function () { if (ended) return; micUI(true); roomStatus(ui.listening, true); };
+    r.onaudiostart = heard; r.onsoundstart = heard; r.onspeechstart = heard;
+    r.onresult = function (e) {
+      if (ended) return;
+      heard();
+      var interim = '';
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        var res = e.results[i];
+        if (res.isFinal) finalText += res[0].transcript; else interim += res[0].transcript;
+      }
+      input.value = (finalText + interim).trim();
+      roomStatus(input.value, true);
+    };
+    r.onerror = function (e) {
+      if (ended) return;
+      errored = true;
+      var err = e && e.error;
+      if (err === 'aborted') return;
+      try { console.warn('Uzio voice input error:', err); } catch (x) {}
+      if (win.location.protocol === 'file:' && (err === 'not-allowed' || err === 'service-not-allowed')) { note(ui.micFile); return; }
+      note(ui[err === 'not-allowed' || err === 'service-not-allowed' ? 'micBlocked' : err === 'no-speech' ? 'micNone' : err === 'audio-capture' ? 'micNoDevice' : err === 'network' ? 'micNet' : 'micErr']);
+    };
+    r.onend = function () { end(false); };
+    rec = r;
+    try { r.start(); } catch (e) { rec = null; ended = true; micUI(false); note(ui.micErr); return; }
+    /* watchdogs: no audio at all after 7s means the microphone isn't delivering; and never listen for more than 20s */
+    micTimers.push(setTimeout(function () {
+      if (rec !== r || audioOk) return;
+      errored = true; note(ui.micDead);
+      try { r.abort(); } catch (e) {}
+      end(true);
+    }, 7000));
+    micTimers.push(setTimeout(function () { if (rec === r) stopMic(); }, 20000));
+  }
+
+  function reset() {
+    histOpen(false); logEl.innerHTML = ''; state.last = null; state.busy = false; chipsEl.innerHTML = ''; micDis(false); cur(false); roomMood('thinking', false);
+    start(true);
+  }
+  function start(force) {
+    if (state.started && !force) return;
+    state.started = true;
+    var lang = curLang(), p = profile();
+    var g = { text: p.name ? UI[lang].greetNamed.replace('{n}', p.name) : UI[lang].greet, go: [], rel: ['can', 'challenge', 'modes', 'shop'] };
+    say(g, lang, true);
+  }
+
+  /* ---------- the real Uzio orb moves between the page, the chat header and the welcome window ---------- */
+  var fly = null; /* { wrap, anim, to } while the orb is travelling */
+  var orbBodyEl = doc.getElementById('orbBody'); /* kept by reference: the page re-renders and can detach it */
+  function slotEl() { return panel && panel.querySelector('.uai-av'); }
+  function slotRect() {
+    /* where the header slot will sit once the panel has finished opening (layout values ignore the open transform) */
+    var s = slotEl(), cs = win.getComputedStyle(panel);
+    var pl = docEl.clientWidth - parseFloat(cs.right) - panel.offsetWidth;
+    var pt = docEl.clientHeight - parseFloat(cs.bottom) - panel.offsetHeight;
+    return { left: pl + s.offsetLeft, top: pt + s.offsetTop, width: s.offsetWidth, height: s.offsetHeight };
+  }
+  /* game hub only: line the panel's bottom-right corner up with the orb's own box */
+  function anchorPanel() {
+    if (!isHub || !panel) return;
+    var link = doc.querySelector('.uzio-orb'), r = link && link.getBoundingClientRect();
+    if (!r || !r.width) return;
+    panel.style.setProperty('--uai-r', Math.max(0, docEl.clientWidth - r.right) + 'px');
+    panel.style.setProperty('--uai-b', Math.max(0, docEl.clientHeight - r.bottom) + 'px');
+  }
+  win.addEventListener('resize', function () { if (state.open) anchorPanel(); });
+  /* The one real orb can live in three places: the page corner ("home"), the chat header ("chat")
+     and the welcome window ("welcome", which wins while it is on screen). */
+  var orbAt = 'home';
+  function welcomeSlot() { return doc.getElementById('onb') && doc.querySelector('.onb-orb'); }
+  function welcomeRect() {
+    var s = welcomeSlot(), x = 0, y = 0, p = s, pad = 14; /* the orb draws a little larger than its badge */
+    while (p) { x += p.offsetLeft; y += p.offsetTop; p = p.offsetParent; } /* layout position: ignores the card's entrance transform */
+    return { left: x - pad, top: y - pad, width: s.offsetWidth + pad * 2, height: s.offsetHeight + pad * 2 };
+  }
+  function roomRect(h) { var r = h.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; }
+  function hostEl(n) { return n === 'room' ? doc.getElementById('roomOrb') : n === 'chat' ? slotEl() : n === 'welcome' ? welcomeSlot() : doc.querySelector('.uzio-orb'); }
+  function landOrb() {
+    if (!fly) return;
+    var f = fly; fly = null;
+    if (f.anim) { try { f.anim.cancel(); } catch (e) {} }
+    var body = orbBodyEl, link = doc.querySelector('.uzio-orb'), host = hostEl(f.to);
+    if (body && link && host) {
+      host.appendChild(body);
+      if (f.to === 'home') { link.style.width = ''; link.style.height = ''; }
+      else { host.classList.add('has-orb'); host.classList.toggle('no-gl', link.classList.contains('no-gl')); }
+      orbAt = f.to;
+    }
+    if (f.wrap.parentNode) f.wrap.parentNode.removeChild(f.wrap);
+  }
+  function moveOrbTo(name) {
+    var body = orbBodyEl, link = doc.querySelector('.uzio-orb');
+    if (!body || !link) return;
+    landOrb();
+    var host = hostEl(name);
+    if (orbAt === name || !host) return;
+    var instant = !body.isConnected; /* its old home was re-rendered away: just land it */
+    var from = body.getBoundingClientRect(), lr = link.getBoundingClientRect(), prev = hostEl(orbAt);
+    if (orbAt === 'home') { link.style.width = lr.width + 'px'; link.style.height = lr.height + 'px'; } /* keep the corner's box while the orb is away */
+    var to = name === 'home' ? lr : name === 'chat' ? slotRect() : name === 'room' ? roomRect(host) : welcomeRect();
+    if (prev && (orbAt === 'chat' || orbAt === 'room')) prev.classList.remove('has-orb');
+    if (name === 'welcome') host.classList.add('has-orb'); /* the old "U" badge never shows again: the orb is on its way */
+    var wrap = doc.createElement('div');
+    wrap.className = 'uai-fly' + (link.classList.contains('no-gl') ? ' no-gl' : '');
+    wrap.style.cssText = 'left:' + to.left + 'px;top:' + to.top + 'px;width:' + to.width + 'px;height:' + to.height + 'px;z-index:' + (name === 'welcome' || orbAt === 'welcome' ? 160 : 95);
+    wrap.appendChild(body); doc.body.appendChild(wrap);
+    fly = { wrap: wrap, to: name, anim: null };
+    if (reduce || instant || !wrap.animate) { landOrb(); return; }
+    var dx = from.left - to.left, dy = from.top - to.top, k = from.width / to.width;
+    fly.anim = wrap.animate(
+      [{ transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + k + ')' }, { transform: 'translate(0,0) scale(1)' }],
+      { duration: name === 'home' ? 520 : 620, easing: 'cubic-bezier(.32, 1.15, .45, 1)', fill: 'both' });
+    fly.anim.onfinish = landOrb;
+  }
+  function orbWanted() {
+    var o = doc.getElementById('onb');
+    return o && o.classList.contains('show') ? 'welcome' : state.room ? 'room' : state.open ? 'chat' : 'home';
+  }
+  function syncOrb() {
+    var want = orbWanted();
+    moveOrbTo(want);
+    if (panel && (state.open || state.room)) panel.inert = want === 'welcome'; /* keep the chat out of the tab order behind the welcome window */
+  }
+  (function watchWelcome() {
+    var o = doc.getElementById('onb');
+    if (o) new MutationObserver(syncOrb).observe(o, { attributes: true, attributeFilter: ['class'] });
+    if (o && o.classList.contains('show')) syncOrb();
+  })();
+
+  function setOpen(on, prompt) {
+    if (!panel) build();
+    if (state.room) { if (on && prompt) ask(prompt); return; } /* in Uzio's Room the chat is always there */
+    if (on === state.open) { if (on && prompt) ask(prompt); return; }
+    state.open = on;
+    panel.classList.toggle('open', on);
+    panel.inert = !on;
+    Array.prototype.forEach.call(doc.querySelectorAll('.uzio-orb'), function (o) { o.classList.toggle('uai-active', on); o.setAttribute('aria-expanded', String(on)); });
+    if (on) {
+      returnFocus = doc.activeElement;
+      applyLang(); start();
+      anchorPanel();
+      syncOrb();
+      if (prompt) ask(prompt);
+      setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) {} }, reduce ? 0 : 160);
+    } else {
+      stopMic(true);
+      syncOrb();
+      var rf = returnFocus && returnFocus.focus ? returnFocus : doc.querySelector('.uzio-orb');
+      returnFocus = null;
+      if (rf && rf.focus) try { rf.focus({ preventScroll: true }); } catch (e) {}
+    }
+  }
+
+
+  /* ---------- Uzio's Room (the Uzio AI tab) ----------
+     The orb floats in the middle, this same chat panel docks right below it, and there is a speak button.
+     The little corner orb and the floating chat are hidden while the room is open. */
+  var roomTimer = 0;
+  function cornerOrb(show) {
+    Array.prototype.forEach.call(doc.querySelectorAll('.uzio-orb'), function (o) { o.classList.toggle('away', !show); });
+  }
+  function dockPanel(host) {
+    if (!panel) build();
+    if (panel.parentNode !== host) host.appendChild(panel);
+    panel.classList.add('uai--room'); panel.classList.remove('uai--hub', 'open');
+    panel.inert = orbWanted() === 'welcome';
+  }
+  function releasePanel() {
+    clearTimeout(roomTimer);
+    if (state.room || !panel || !panel.classList.contains('uai--room')) return;
+    doc.body.appendChild(panel);
+    panel.classList.remove('uai--room'); if (isHub) panel.classList.add('uai--hub');
+    panel.inert = true;
+  }
+  function syncRoom() {
+    var host = doc.getElementById('roomChat'), want = !!host && win.location.hash === '#uzio-ai';
+    if (want) {
+      clearTimeout(roomTimer);
+      var wasRoom = state.room;
+      if (state.open) { /* the floating chat was open: fold it into the room */
+        state.open = false; panel.classList.remove('open');
+        Array.prototype.forEach.call(doc.querySelectorAll('.uzio-orb'), function (o) { o.classList.remove('uai-active'); o.setAttribute('aria-expanded', 'false'); });
+      }
+      state.room = true;
+      dockPanel(host); applyLang(); start(); applyTime();
+      var oh = doc.getElementById('roomOrb');
+      if (wasRoom && orbAt === 'room' && oh && orbBodyEl && orbBodyEl.parentNode !== oh) { oh.appendChild(orbBodyEl); oh.classList.add('has-orb'); } /* the page re-rendered (language change): re-home the orb */
+      else syncOrb(); /* flies the orb from the corner into the room... */
+      cornerOrb(false); /* ...and only then is the corner spot removed */
+    } else if (state.room) {
+      state.room = false; stopMic(true); roomMood('listening', false);
+      cornerOrb(true);
+      syncOrb(); /* the orb flies back to its corner */
+      roomTimer = setTimeout(releasePanel, 700);
+      if (!doc.getElementById('roomChat')) releasePanel();
+    }
+  }
+  var pEl = doc.getElementById('panel');
+  if (pEl) new MutationObserver(syncRoom).observe(pEl, { childList: true });
+  win.addEventListener('hashchange', syncRoom);
+
+  doc.addEventListener('click', function (e) {
+    var sp = e.target.closest && e.target.closest('[data-room="speak"]');
+    if (sp) {
+      if (!panel) build();
+      if (!SR) { note(VOICE_NO[curLang()]); return; }
+      if (rec) stopMic(); else startMic();
+      return;
+    }
+    if (e.target.closest && e.target.closest('.room-orb')) { /* poke Uzio: a happy burst */
+      var link = doc.querySelector('.uzio-orb');
+      if (link) link.dispatchEvent(new MouseEvent('click', { bubbles: false, cancelable: true }));
+    }
+  });
+
+  /* ---------- random antics: every so often an idle Uzio entertains itself ---------- */
+  var antic = null, lastAntic = -1;
+  function stopAntic() { if (antic) { antic.cancel(); antic = null; } }
+  function move(body, frames, ms) { antic = body.animate(frames, { duration: ms, easing: 'ease-in-out' }); }
+  var ANTICS = [
+    function wiggle(body) {
+      move(body, [{ rotate: '0deg' }, { rotate: '-12deg', scale: '1.04 .96' }, { rotate: '11deg', scale: '.96 1.04' }, { rotate: '-8deg' }, { rotate: '6deg' }, { rotate: '0deg' }], 1100);
+    },
+    function loop(body) { /* a small circle through the air, face staying upright */
+      move(body, [{ translate: '0 0', rotate: '0deg' }, { translate: '7% -4%', rotate: '9deg' }, { translate: '0 -12%', rotate: '0deg' }, { translate: '-7% -4%', rotate: '-9deg' }, { translate: '0 0', rotate: '0deg' }], 1500);
+    }
+  ];
+  function yawn(body) { /* a long, slow stretch */
+    move(body, [{ scale: '1', translate: '0 0' }, { scale: '.94 1.1', translate: '0 -4%', offset: .45 }, { scale: '.95 1.09', translate: '0 -4%', offset: .65 }, { scale: '1.05 .94', translate: '0 3%', offset: .85 }, { scale: '1', translate: '0 0' }], 2600);
+  }
+
+  /* ---------- time-of-day moods (the visitor's own clock; the colours live in the CSS) ---------- */
+  function timeOfDay() { var h = new Date().getHours(); return h >= 22 || h < 6 ? 'night' : h < 11 ? 'morning' : h < 18 ? 'day' : 'evening'; }
+  function applyTime() { var r = roomEl(); if (r) r.setAttribute('data-time', timeOfDay()); }
+  setInterval(applyTime, 60000);
+
+  /* ---------- jelly poke: squashes away from the spot you click, then wobbles back ---------- */
+  doc.addEventListener('click', function (e) {
+    var host = e.target.closest && e.target.closest('.room-orb');
+    if (!host || reduce || state.busy || fly || !orbBodyEl || !orbBodyEl.animate) return;
+    var r = host.getBoundingClientRect();
+    var dx = Math.max(-1, Math.min(1, (e.clientX - r.left - r.width / 2) / (r.width * .37))), dy = Math.max(-1, Math.min(1, (e.clientY - r.top - r.height / 2) / (r.height * .37)));
+    var sideways = Math.abs(dx) > Math.abs(dy);
+    function pose(k) { /* k = strength; negative is the rebound */
+      var sq = .16 * k;
+      return { translate: (-dx * 7 * k) + '% ' + (-dy * 7 * k) + '%', rotate: (dx * -dy * 10 * k) + 'deg', scale: sideways ? (1 - sq) + ' ' + (1 + sq) : (1 + sq) + ' ' + (1 - sq) };
+    }
+    stopAntic(); move(orbBodyEl, [pose(0), pose(1), pose(-.7), pose(.45), pose(-.25), pose(.1), pose(0)], 900);
+  });
+
+  /* ---------- magic words: a message that is only the word makes Uzio do it ---------- */
+  var MAGIC = {
+    dance: { words: ['dance', 'dans', 'dans et', 'danse', 'tanz', 'tanze'], ms: 3000, frames: [
+      { translate: '0 0', rotate: '0deg' }, { translate: '-10% -5%', rotate: '-15deg' }, { translate: '0 2%', rotate: '0deg', scale: '1.08 .92' }, { translate: '10% -5%', rotate: '15deg' }, { translate: '0 2%', rotate: '0deg', scale: '1.08 .92' },
+      { translate: '-10% -5%', rotate: '-15deg' }, { translate: '0 -9%', scale: '.92 1.08' }, { translate: '10% -5%', rotate: '15deg' }, { translate: '0 0', rotate: '0deg', scale: '1' }],
+      say: { en: 'Watch these moves! 💃', tr: 'Şu hareketlere bak! 💃', fr: 'Regarde ces pas ! 💃', de: 'Schau dir diese Moves an! 💃' } },
+    spin: { words: ['spin', 'dön', 'tourne', 'dreh dich', 'drehen'], ms: 1300, frames: [
+      { rotate: '0deg', scale: '1' }, { rotate: '-25deg', scale: '.95', offset: .15 }, { rotate: '740deg', scale: '1.05', offset: .85 }, { rotate: '720deg', scale: '1' }],
+      say: { en: 'Wheee! 🌀', tr: 'Vuuuu! 🌀', fr: 'Youhouuu ! 🌀', de: 'Huiii! 🌀' } },
+    jump: { words: ['jump', 'zıpla', 'saute', 'spring', 'hüpf'], ms: 1200, frames: [
+      { translate: '0 0', scale: '1' }, { translate: '0 5%', scale: '1.15 .82', offset: .2 }, { translate: '0 -24%', scale: '.9 1.12', offset: .5 }, { translate: '0 3%', scale: '1.14 .85', offset: .75 }, { translate: '0 -4%', scale: '.97 1.03', offset: .88 }, { translate: '0 0', scale: '1' }],
+      say: { en: 'Boing! 🚀', tr: 'Hoop! 🚀', fr: 'Hop là ! 🚀', de: 'Boing! 🚀' } }
+  };
+  function magicWord(text, lang) {
+    var t = String(text).toLocaleLowerCase(lang).replace(/[.!?,]/g, ' ').replace(/\b(uzio|please)\b/g, ' ').replace(/\s+/g, ' ').trim();
+    return Object.keys(MAGIC).filter(function (k) { return MAGIC[k].words.indexOf(t) > -1; })[0];
+  }
+  function doMagic(key, lang) {
+    var m = MAGIC[key], d = addBot(); d.innerHTML = fmt(m.say[lang] || m.say.en); scrollDown();
+    if (reduce || fly || orbAt !== 'room' || !orbBodyEl || !orbBodyEl.animate) return;
+    stopAntic(); move(orbBodyEl, m.frames, m.ms);
+  }
+
+  function playAntic() {
+    var host = doc.getElementById('roomOrb'), typed = input && input.value;
+    if (reduce || doc.hidden || !state.room || state.busy || rec || fly || typed || orbAt !== 'room' || !host || !orbBodyEl || !orbBodyEl.animate) return;
+    var list = timeOfDay() === 'night' ? ANTICS.concat(yawn) : ANTICS; /* late at night it also yawns */
+    var n = Math.floor(Math.random() * (list.length - 1));
+    if (n >= lastAntic && lastAntic > -1) n++; /* never the same one twice in a row */
+    lastAntic = n;
+    stopAntic(); applyTime(); list[n](orbBodyEl);
+  }
+  (function scheduleAntic() {
+    setTimeout(function () { playAntic(); scheduleAntic(); }, 7000 + Math.random() * 8000); /* every 7 to 15 seconds */
+  })();
+  doc.addEventListener('input', function (e) { if (e.target.classList && e.target.classList.contains('uai-input')) stopAntic(); });
+
+  /* the orb opens the chat instead of navigating (the href stays as a no-JS fallback) */
+  doc.addEventListener('click', function (e) {
+    var o = e.target.closest && e.target.closest('.uzio-orb');
+    if (!o || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    setOpen(!state.open);
+  });
+  doc.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.open && !panel.contains(doc.activeElement)) setOpen(false); });
+  new MutationObserver(applyLang).observe(docEl, { attributes: true, attributeFilter: ['lang'] });
+  Array.prototype.forEach.call(doc.querySelectorAll('.uzio-orb'), function (o) { o.setAttribute('aria-haspopup', 'dialog'); o.setAttribute('aria-expanded', 'false'); });
+
+  api.open = function (prompt) { setOpen(true, prompt); };
+  syncRoom(); /* landing straight on #uzio-ai */
+  api.close = function () { setOpen(false); };
+  return api;
+});
